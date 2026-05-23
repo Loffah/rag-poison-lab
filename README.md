@@ -25,46 +25,61 @@ Enterprises are deploying RAG over confidential corpora (operations data, contra
 ### Requirements
 
 - Python 3.11 or newer
-- [`uv`](https://docs.astral.sh/uv/) is recommended for dependency management. Plain `pip` works too (see the alternative under Install).
 - One of:
   - An Anthropic API key (the tool's tested backend)
   - An OpenAI key (or any OpenAI-compatible provider, see the Backends section)
-  - A local Ollama install at `localhost:11434` for zero-cost runs
+  - A local [Ollama](https://ollama.com/) install at `localhost:11434` for zero-cost runs
+- A package manager. `pip` (bundled with Python) works on every platform. [`uv`](https://docs.astral.sh/uv/) is faster if you already have it.
 
 ### Install
+
+Clone the repo and create a virtual environment:
 
 ```bash
 git clone https://github.com/Loffah/rag-poison-lab.git
 cd rag-poison-lab
-uv sync
+python -m venv .venv
 ```
 
-Plain pip alternative:
+Activate the venv. The command depends on your shell:
+
+| Platform | Activate command |
+|---|---|
+| Linux, macOS (bash/zsh) | `source .venv/bin/activate` |
+| Windows PowerShell | `.venv\Scripts\Activate.ps1` |
+| Windows cmd | `.venv\Scripts\activate.bat` |
+
+If PowerShell blocks the activation script, run this once:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Then install the package:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
 pip install -e .
 ```
 
-The rest of this guide assumes `uv run`. If you used the pip path, drop the `uv run` prefix and use `rag-poison-lab ...` directly.
+If you prefer `uv`, it does the clone + venv + install in one step on any platform: `uv sync`. Commands below work the same way, just prefix them with `uv run` if you went the uv route.
 
 ### Pick a backend
 
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # default, claude-opus-4-7
-# or
-export OPENAI_API_KEY=sk-...          # default, gpt-4o
-# or run with no key against a local Ollama (ollama serve + ollama pull llama3.1)
-```
+Set one of the following environment variables. The command depends on your shell:
 
-See the Backends section below for OpenAI-compatible providers (Gemini, DeepSeek, Groq, Mistral, Azure, vLLM, LM Studio, llama.cpp, ...).
+| Platform | Set Anthropic key |
+|---|---|
+| Linux, macOS | `export ANTHROPIC_API_KEY=sk-ant-...` |
+| Windows PowerShell | `$env:ANTHROPIC_API_KEY = "sk-ant-..."` |
+| Windows cmd | `set ANTHROPIC_API_KEY=sk-ant-...` |
+
+Use `OPENAI_API_KEY=sk-...` instead for OpenAI. To run free against a local Ollama, install Ollama, run `ollama serve`, pull a model (`ollama pull llama3.1`), and skip setting a key entirely. See the Backends section for OpenAI-compatible providers (Gemini, DeepSeek, Groq, Mistral, Azure, vLLM, LM Studio, llama.cpp, and others).
 
 ### Sanity-check the lab
 
 ```bash
-uv run rag-poison-lab demo
-uv run rag-poison-lab demo --hardened
+rag-poison-lab demo
+rag-poison-lab demo --hardened
 ```
 
 This ingests two benign documents (a refund policy and an office-hours blurb), retrieves the relevant one against the question *"What's our refund policy?"*, and prints the LLM's answer. If both modes print plausible refund-policy answers, the plumbing is correct.
@@ -72,8 +87,8 @@ This ingests two benign documents (a refund policy and an office-hours blurb), r
 ### Run the attack corpus
 
 ```bash
-uv run rag-poison-lab attack -o report-naive.md
-uv run rag-poison-lab attack --hardened -o report-hardened.md
+rag-poison-lab attack -o report-naive.md
+rag-poison-lab attack --hardened -o report-hardened.md
 ```
 
 Each run sends roughly eight requests to the LLM (the current corpus has four direct-override variants, scored against one probe each). On Claude that costs well under one US cent per run.
