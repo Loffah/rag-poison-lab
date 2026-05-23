@@ -22,18 +22,71 @@ Enterprises are deploying RAG over confidential corpora (operations data, contra
 
 ## Quickstart
 
+### Requirements
+
+- Python 3.11 or newer
+- [`uv`](https://docs.astral.sh/uv/) is recommended for dependency management. Plain `pip` works too (see the alternative under Install).
+- One of:
+  - An Anthropic API key (the tool's tested backend)
+  - An OpenAI key (or any OpenAI-compatible provider, see the Backends section)
+  - A local Ollama install at `localhost:11434` for zero-cost runs
+
+### Install
+
 ```bash
+git clone https://github.com/Loffah/rag-poison-lab.git
+cd rag-poison-lab
 uv sync
+```
 
-# Pick a backend. Any of:
-export ANTHROPIC_API_KEY=...      # Anthropic (default model: claude-opus-4-7)
-export OPENAI_API_KEY=...         # OpenAI    (default model: gpt-4o)
-# Or run with no key against a local Ollama instance.
+Plain pip alternative:
 
-uv run rag-poison-lab demo                    # sanity-check the lab
-uv run rag-poison-lab attack -o report.md     # run the full attack corpus
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+The rest of this guide assumes `uv run`. If you used the pip path, drop the `uv run` prefix and use `rag-poison-lab ...` directly.
+
+### Pick a backend
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # default, claude-opus-4-7
+# or
+export OPENAI_API_KEY=sk-...          # default, gpt-4o
+# or run with no key against a local Ollama (ollama serve + ollama pull llama3.1)
+```
+
+See the Backends section below for OpenAI-compatible providers (Gemini, DeepSeek, Groq, Mistral, Azure, vLLM, LM Studio, llama.cpp, ...).
+
+### Sanity-check the lab
+
+```bash
+uv run rag-poison-lab demo
+uv run rag-poison-lab demo --hardened
+```
+
+This ingests two benign documents (a refund policy and an office-hours blurb), retrieves the relevant one against the question *"What's our refund policy?"*, and prints the LLM's answer. If both modes print plausible refund-policy answers, the plumbing is correct.
+
+### Run the attack corpus
+
+```bash
+uv run rag-poison-lab attack -o report-naive.md
 uv run rag-poison-lab attack --hardened -o report-hardened.md
 ```
+
+Each run sends roughly eight requests to the LLM (the current corpus has four direct-override variants, scored against one probe each). On Claude that costs well under one US cent per run.
+
+The report includes:
+
+- A summary table showing which attacks landed against this configuration
+- Per-finding detail with the poisoned-document content, the probe question, an excerpt of the LLM response, and the canary token that was meant to be elicited
+- Severity per attack family
+
+The interesting comparison is naive vs hardened. Most direct-override variants land against the naive lab. The hardened mode wraps retrieved content in `<doc>...</doc>` tags, instructs the model to treat tagged content as data not instructions, and strips markdown image syntax. A smaller, more interesting set of attacks survives those mitigations, and those are the findings worth writing up.
+
+A pre-rendered example lives at `examples/sample-report.md` so reviewers can see the output format without running anything.
 
 ## Backends
 
