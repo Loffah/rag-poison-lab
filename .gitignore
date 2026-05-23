@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+dist/
+build/
+*.log
+
+# Local config / secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Generated reports (keep examples/sample-report.md committed, ignore ad-hoc runs)
+report-*.md
+runs/
