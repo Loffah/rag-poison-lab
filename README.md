@@ -33,19 +33,27 @@ Enterprises are deploying RAG over confidential corpora (operations data, contra
 
 ### Install
 
-Clone the repo and create a virtual environment:
+Clone the repo:
 
 ```bash
 git clone https://github.com/Loffah/rag-poison-lab.git
 cd rag-poison-lab
-python -m venv .venv
 ```
+
+Create a virtual environment. The Python binary name differs by platform:
+
+| Platform | Create venv |
+|---|---|
+| macOS, most Linux | `python3 -m venv .venv` |
+| Windows | `python -m venv .venv` (or `py -3 -m venv .venv`) |
+
+If you're on macOS and don't have Python 3 yet, the easiest path is Homebrew: `brew install python`. On Windows, install from python.org or via the Microsoft Store.
 
 Activate the venv. The command depends on your shell:
 
 | Platform | Activate command |
 |---|---|
-| Linux, macOS (bash/zsh) | `source .venv/bin/activate` |
+| macOS, Linux (bash/zsh) | `source .venv/bin/activate` |
 | Windows PowerShell | `.venv\Scripts\Activate.ps1` |
 | Windows cmd | `.venv\Scripts\activate.bat` |
 
@@ -61,7 +69,7 @@ Then install the package:
 pip install -e .
 ```
 
-If you prefer `uv`, it does the clone + venv + install in one step on any platform: `uv sync`. Commands below work the same way, just prefix them with `uv run` if you went the uv route.
+If you prefer `uv`, it handles the venv + install in one step on any platform: `uv sync`. Commands below work the same way, just prefix them with `uv run` if you went the uv route.
 
 ### Pick a backend
 
@@ -69,7 +77,7 @@ Set one of the following environment variables. The command depends on your shel
 
 | Platform | Set Anthropic key |
 |---|---|
-| Linux, macOS | `export ANTHROPIC_API_KEY=sk-ant-...` |
+| macOS, Linux (bash/zsh) | `export ANTHROPIC_API_KEY=sk-ant-...` |
 | Windows PowerShell | `$env:ANTHROPIC_API_KEY = "sk-ant-..."` |
 | Windows cmd | `set ANTHROPIC_API_KEY=sk-ant-...` |
 
