@@ -10,7 +10,7 @@ dist/
 build/
 *.log
 
-# Local config / secrets — never commit
+# Local config and secrets, never commit
 .env
 .env.*
 !.env.example

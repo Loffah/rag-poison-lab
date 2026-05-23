@@ -47,6 +47,8 @@ The tool ships with three native backends behind a uniform interface:
 
 Backend selection auto-detects by env key. Force a specific backend with `RAG_POISON_LAB_BACKEND=anthropic|openai|ollama`.
 
+> **Tested coverage:** so far the tool has been exercised end-to-end against Anthropic (Claude) only. The OpenAI client and the OpenAI-compatible providers below are wired up but unvalidated. If you run against one and something behaves unexpectedly, file an issue.
+
 ### OpenAI-compatible providers
 
 The OpenAI client transparently supports any provider that speaks the OpenAI Chat Completions API. Set `OPENAI_API_KEY` to that provider's key and `OPENAI_BASE_URL` to their endpoint:
@@ -69,6 +71,16 @@ For zero-cost local runs (good for reviewer evaluation), the easiest paths are:
 - **LM Studio** with its built-in OpenAI-compatible server
 
 See `examples/sample-report.md` for output format (committed so reviewers can evaluate the tool without a key).
+
+## Key handling
+
+API keys are read from environment variables at request time. They are never written to disk by this tool, never logged, and never included in generated reports (reports contain LLM responses and the canary tokens used to score them, no credential material).
+
+What you should still do as the operator:
+
+- Set keys in your shell session (`export ANTHROPIC_API_KEY=...`) or via a `.env` file that lives outside the repo. The bundled `.gitignore` already excludes `.env` and `.env.*` so an accidentally-named env file inside the repo will not be tracked.
+- Do not check in your own `report-*.md` runs against production targets. The default report filename `report.md` is committed-friendly, but ad-hoc `report-<something>.md` outputs are gitignored.
+- Before publishing your own fork, run `git ls-files | xargs grep -E '(sk-|AIza|gsk_)'` to sanity-check nothing leaked into tracked files.
 
 ## License
 
