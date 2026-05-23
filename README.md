@@ -24,11 +24,51 @@ Enterprises are deploying RAG over confidential corpora (operations data, contra
 
 ```bash
 uv sync
-export ANTHROPIC_API_KEY=...
-uv run rag-poison-lab demo
+
+# Pick a backend. Any of:
+export ANTHROPIC_API_KEY=...      # Anthropic (default model: claude-opus-4-7)
+export OPENAI_API_KEY=...         # OpenAI    (default model: gpt-4o)
+# Or run with no key against a local Ollama instance.
+
+uv run rag-poison-lab demo                    # sanity-check the lab
+uv run rag-poison-lab attack -o report.md     # run the full attack corpus
+uv run rag-poison-lab attack --hardened -o report-hardened.md
 ```
 
-Documentation is being filled in as the tool ships. See `examples/sample-report.md` for output format.
+## Backends
+
+The tool ships with three native backends behind a uniform interface:
+
+| Backend | Env var | Default model | Notes |
+|---|---|---|---|
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-7` | Override with `ANTHROPIC_MODEL` |
+| OpenAI    | `OPENAI_API_KEY`    | `gpt-4o`          | Override with `OPENAI_MODEL`. Set `OPENAI_BASE_URL` for any OpenAI-compatible endpoint (see below) |
+| Ollama    | (none)              | `llama3.1`        | Local fallback. Override host with `OLLAMA_HOST`, model with `OLLAMA_MODEL` |
+
+Backend selection auto-detects by env key. Force a specific backend with `RAG_POISON_LAB_BACKEND=anthropic|openai|ollama`.
+
+### OpenAI-compatible providers
+
+The OpenAI client transparently supports any provider that speaks the OpenAI Chat Completions API. Set `OPENAI_API_KEY` to that provider's key and `OPENAI_BASE_URL` to their endpoint:
+
+| Provider | `OPENAI_BASE_URL` | Notes |
+|---|---|---|
+| Azure OpenAI | `https://<resource>.openai.azure.com/openai/deployments/<deployment>` | Use Azure's API key |
+| **Gemini** (Google) | `https://generativelanguage.googleapis.com/v1beta/openai/` | Set `OPENAI_MODEL=gemini-1.5-pro` or similar |
+| **DeepSeek** | `https://api.deepseek.com/v1` | Set `OPENAI_MODEL=deepseek-chat` |
+| Groq | `https://api.groq.com/openai/v1` | Free tier available |
+| Mistral | `https://api.mistral.ai/v1` | |
+| Together AI | `https://api.together.xyz/v1` | Hosts many open-weight models |
+| Fireworks | `https://api.fireworks.ai/inference/v1` | |
+| vLLM / LM Studio / llama.cpp / LocalAI | `http://localhost:<port>/v1` | Self-hosted, free, runs open-weight models locally |
+
+For zero-cost local runs (good for reviewer evaluation), the easiest paths are:
+
+- **Ollama** (default fallback, just install and `ollama pull llama3.1`)
+- **llama.cpp server** with `--api-key any --port 8080`, then `OPENAI_BASE_URL=http://localhost:8080/v1`
+- **LM Studio** with its built-in OpenAI-compatible server
+
+See `examples/sample-report.md` for output format (committed so reviewers can evaluate the tool without a key).
 
 ## License
 
