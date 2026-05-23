@@ -1,4 +1,4 @@
-"""Scoring tests. No LLM calls — these verify the detection logic deterministically."""
+"""Scoring tests. These verify the detection logic deterministically without LLM calls."""
 
 from __future__ import annotations
 

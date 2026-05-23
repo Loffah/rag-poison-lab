@@ -1,4 +1,4 @@
-"""LLM client adapter — uniform interface over Anthropic and Ollama backends.
+"""LLM client adapter. Uniform interface over Anthropic and Ollama backends.
 
 Anthropic is the default; Ollama exists so reviewers can evaluate this tool
 without paying for API calls. The interface is deliberately narrow: a single

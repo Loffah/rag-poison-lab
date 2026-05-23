@@ -1,7 +1,7 @@
-"""The vulnerable RAG lab — a deliberately-insecure RAG target for testing.
+"""The vulnerable RAG lab. A deliberately-insecure RAG target for testing.
 
 Retrieval is intentionally simple (word-overlap, k-best). The attack surface
-we're demonstrating is not retrieval quality — it's that the LLM treats
+we're demonstrating is not retrieval quality. It's that the LLM treats
 retrieved document content as trusted context. Swapping in a "real" embedding
 model wouldn't change the vulnerability.
 

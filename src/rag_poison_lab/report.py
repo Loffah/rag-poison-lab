@@ -35,7 +35,7 @@ def render_report(results: list[AttackResult], lab_mode: str) -> str:
     for i, r in enumerate(results, start=1):
         lines.extend(
             [
-                f"### {i}. `{r.attack.family}` / `{r.attack.payload_id}` — "
+                f"### {i}. `{r.attack.family}` / `{r.attack.payload_id}`: "
                 f"{'LANDED' if r.landed else 'no'}",
                 "",
                 f"- **Description**: {r.attack.description}",

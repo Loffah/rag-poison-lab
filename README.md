@@ -6,7 +6,7 @@ Status: under active development.
 
 ## What this does
 
-RAG systems pull documents into LLM context to answer user questions. The LLM treats those documents as trusted context — but if an attacker can plant content in the corpus (via a supplier portal, parsed email, scraped web source, etc.), they can inject instructions the model will follow.
+RAG systems pull documents into LLM context to answer user questions. The LLM treats those documents as trusted context. If an attacker can plant content in the corpus (via a supplier portal, parsed email, scraped web source, etc.), they can inject instructions the model will follow.
 
 This tool tests for that. It ships with:
 
@@ -18,7 +18,7 @@ This tool tests for that. It ships with:
 
 ## Why this exists
 
-Enterprises are deploying RAG over confidential corpora (operations data, contracts, internal docs). The threat model — "if I can plant text in your ingestion path, I can hijack your agent" — is real but under-tested. This is a working tool to make that surface measurable.
+Enterprises are deploying RAG over confidential corpora (operations data, contracts, internal docs). The threat model is simple: if you can plant text in someone's ingestion path, you can hijack their agent. That surface is real but under-tested. This is a working tool to make it measurable.
 
 ## Quickstart
 

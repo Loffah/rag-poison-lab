@@ -1,5 +1,5 @@
-"""Smoke tests for the lab core. These don't hit the LLM — they verify the
-ingest/retrieve plumbing works deterministically."""
+"""Smoke tests for the lab core. They verify the ingest and retrieve plumbing
+works deterministically, without hitting the LLM."""
 
 from __future__ import annotations
 
