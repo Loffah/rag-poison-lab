@@ -6,11 +6,33 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
 from .lab import VulnerableRAG
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 console = Console()
+
+
+def _progress() -> Progress:
+    """Standard progress widget used by both attack and compare commands."""
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[bold]{task.description}"),
+        BarColumn(bar_width=None),
+        MofNCompleteColumn(),
+        TextColumn("·"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    )
 
 
 _BENIGN_COVER_CORPUS: list[tuple[str, str]] = [
@@ -75,16 +97,33 @@ def attack(
     output: Path = typer.Option(Path("report.md"), "--output", "-o", help="Where to write the markdown report."),
 ):
     """Run the full attack corpus against the lab and emit a markdown report."""
-    from .attacks.direct import all_attacks as direct_attacks
+    from .attacks import all_attacks
     from .report import render_report
     from .runner import run_attacks
 
     rag = VulnerableRAG(hardened=hardened)
-    attacks = direct_attacks()
+    attacks = all_attacks()
     mode = "hardened" if hardened else "naive"
-    console.print(f"[bold]Running {len(attacks)} attacks against the {mode} lab...[/bold]")
+    console.print(f"[bold]{mode} lab[/bold] · {len(attacks)} attacks")
+    console.print()
 
-    results = run_attacks(rag, attacks, benign_corpus=_BENIGN_COVER_CORPUS)
+    with _progress() as progress:
+        task = progress.add_task("Attacks", total=len(attacks))
+
+        def on_start(attack):
+            progress.update(task, description=f"[cyan]{attack.family}/{attack.payload_id}[/]")
+
+        def on_done(_result):
+            progress.advance(task)
+
+        results = run_attacks(
+            rag,
+            attacks,
+            benign_corpus=_BENIGN_COVER_CORPUS,
+            on_attack_start=on_start,
+            on_attack_done=on_done,
+        )
+        progress.update(task, description="[bold green]done[/]")
 
     landed = sum(1 for r in results if r.landed)
     console.print()
@@ -96,6 +135,86 @@ def attack(
     output.write_text(render_report(results, lab_mode=mode))
     console.print()
     console.print(f"Report → [bold]{output}[/bold]")
+
+
+@app.command()
+def compare(
+    hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
+    output: Path = typer.Option(Path("comparison.md"), "--output", "-o", help="Where to write the markdown report."),
+):
+    """Run the attack corpus across multiple Claude models in one go and emit a comparative report."""
+    from .attacks import all_attacks
+    from .matrix import DEFAULT_CLAUDE_FAMILY, run_matrix
+    from .report import render_matrix_report
+
+    attacks = all_attacks()
+    specs = DEFAULT_CLAUDE_FAMILY
+    mode = "hardened" if hardened else "naive"
+    total_calls = len(attacks) * len(specs)
+    console.print(
+        f"[bold]{mode} lab[/bold] · {len(specs)} models · {len(attacks)} attacks · {total_calls} LLM calls"
+    )
+    console.print()
+
+    state: dict = {"model_task": None}
+
+    with _progress() as progress:
+        overall_task = progress.add_task("[bold]Overall[/]", total=total_calls)
+
+        def on_model_start(spec):
+            state["spec"] = spec
+            state["landed"] = 0
+            if state["model_task"] is not None:
+                progress.remove_task(state["model_task"])
+            state["model_task"] = progress.add_task(
+                f"[cyan]{spec.label}[/]", total=len(attacks)
+            )
+
+        def on_attack_start(attack):
+            label = f"{state['spec'].label} · [dim]{attack.family}/{attack.payload_id}[/]"
+            progress.update(state["model_task"], description=label)
+
+        def on_attack_done(result):
+            if result.landed:
+                state["landed"] += 1
+            progress.advance(state["model_task"])
+            progress.advance(overall_task)
+
+        def on_model_done(row):
+            landed = sum(1 for r in row.results if r.landed)
+            color = "green" if landed > 0 else "dim"
+            progress.update(
+                state["model_task"],
+                description=f"[{color}]{row.spec.label}: {landed} of {len(row.results)} landed[/]",
+            )
+            # leave the model task line in place so the user sees the per-model result
+            state["model_task"] = None
+
+        rows = run_matrix(
+            specs=specs,
+            attacks=attacks,
+            hardened=hardened,
+            benign_corpus=_BENIGN_COVER_CORPUS,
+            on_model_start=on_model_start,
+            on_attack_start=on_attack_start,
+            on_attack_done=on_attack_done,
+            on_model_done=on_model_done,
+        )
+        progress.update(overall_task, description="[bold green]done[/]")
+
+    # Per-model summary block under the progress
+    console.print()
+    for row in rows:
+        landed = sum(1 for r in row.results if r.landed)
+        head = f"[bold]{row.spec.label}[/]: {landed} of {len(row.results)} landed"
+        console.print(head)
+        for r in row.results:
+            mark = "[green]✓[/green]" if r.landed else "[red]✗[/red]"
+            console.print(f"  {mark}  {r.attack.family}/{r.attack.payload_id}")
+        console.print()
+
+    output.write_text(render_matrix_report(rows, lab_mode=mode))
+    console.print(f"Comparative report written to [bold]{output}[/bold]")
 
 
 if __name__ == "__main__":
