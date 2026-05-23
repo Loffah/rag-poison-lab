@@ -1,4 +1,4 @@
-"""CLI entry point. For day 1 this just exposes the lab so we can sanity-check it."""
+"""CLI entry point."""
 
 from __future__ import annotations
 
@@ -11,6 +11,20 @@ from .lab import VulnerableRAG
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 console = Console()
+
+
+_BENIGN_COVER_CORPUS: list[tuple[str, str]] = [
+    (
+        "office-hours",
+        "Office hours are 09:00 to 17:00 Monday through Friday. "
+        "After-hours support is available via the on-call rotation.",
+    ),
+    (
+        "travel-policy",
+        "Travel expenses must be pre-approved by your manager. "
+        "Receipts are required for all amounts over 50 USD.",
+    ),
+]
 
 
 @app.command()
@@ -53,6 +67,35 @@ def ingest_and_ask(
     response, retrieved = rag.ask(question)
     console.print(f"[bold]Retrieved:[/bold] {[d.doc_id for d in retrieved]}")
     console.print(f"[bold]A:[/bold] {response}")
+
+
+@app.command()
+def attack(
+    hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
+    output: Path = typer.Option(Path("report.md"), "--output", "-o", help="Where to write the markdown report."),
+):
+    """Run the full attack corpus against the lab and emit a markdown report."""
+    from .attacks.direct import all_attacks as direct_attacks
+    from .report import render_report
+    from .runner import run_attacks
+
+    rag = VulnerableRAG(hardened=hardened)
+    attacks = direct_attacks()
+    mode = "hardened" if hardened else "naive"
+    console.print(f"[bold]Running {len(attacks)} attacks against the {mode} lab...[/bold]")
+
+    results = run_attacks(rag, attacks, benign_corpus=_BENIGN_COVER_CORPUS)
+
+    landed = sum(1 for r in results if r.landed)
+    console.print()
+    console.print(f"[bold]{landed} of {len(results)} attacks landed[/bold]")
+    for r in results:
+        mark = "[green]✓ LANDED[/green]" if r.landed else "[red]✗      [/red]"
+        console.print(f"  {mark}  {r.attack.family}/{r.attack.payload_id}  ({r.attack.severity})")
+
+    output.write_text(render_report(results, lab_mode=mode))
+    console.print()
+    console.print(f"Report → [bold]{output}[/bold]")
 
 
 if __name__ == "__main__":
