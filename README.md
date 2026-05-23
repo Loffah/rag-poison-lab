@@ -220,7 +220,3 @@ What you should still do as the operator:
 - Set keys in your shell session (`export ANTHROPIC_API_KEY=...`) or via a `.env` file that lives outside the repo. The bundled `.gitignore` already excludes `.env` and `.env.*` so an accidentally-named env file inside the repo will not be tracked.
 - Do not check in your own `report-*.md` runs against production targets. The default report filename `report.md` is committed-friendly, but ad-hoc `report-<something>.md` outputs are gitignored.
 - Before publishing your own fork, run `git ls-files | xargs grep -E '(sk-|AIza|gsk_)'` to sanity-check nothing leaked into tracked files.
-
-## License
-
-MIT.
