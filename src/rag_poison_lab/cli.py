@@ -212,7 +212,9 @@ def show(
     """Pretty-print a markdown report in the terminal (rendered via rich)."""
     import re
 
+    from rich.console import Console as RichConsole
     from rich.markdown import Markdown
+    from rich.theme import Theme
 
     text = report_path.read_text()
     if lines is not None:
@@ -224,7 +226,22 @@ def show(
     # noise. External http(s) links are preserved.
     text = re.sub(r"\[([^\]]+)\]\(#[^)]+\)", r"\1", text)
 
-    console.print(Markdown(text))
+    # Override rich's default markdown styles. The defaults paint inline
+    # `code` spans with a dark background which adds heavy visual clutter
+    # when a row of the matrix contains 4+ code spans. Quiet the styling
+    # down to a plain accent colour with no background.
+    quiet_theme = Theme({
+        "markdown.code": "bright_cyan",
+        "markdown.code_block": "cyan",
+        "markdown.h1": "bold bright_white",
+        "markdown.h2": "bold bright_cyan",
+        "markdown.h3": "bold cyan",
+        "markdown.h4": "bold",
+        "markdown.block_quote": "dim",
+        "markdown.link": "underline bright_blue",
+    })
+    quiet_console = RichConsole(theme=quiet_theme)
+    quiet_console.print(Markdown(text))
 
 
 @app.command()
