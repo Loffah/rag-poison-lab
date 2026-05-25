@@ -18,4 +18,5 @@ build/
 # Generated reports (keep examples/sample-report.md committed, ignore ad-hoc runs)
 report-*.md
 comparison-*.md
+reports/
 runs/

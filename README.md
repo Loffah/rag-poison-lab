@@ -102,9 +102,11 @@ This ingests two benign documents (a refund policy and an office-hours blurb), r
 ### Run the attack corpus
 
 ```bash
-rag-poison-lab attack -o report-naive.md
-rag-poison-lab attack --hardened -o report-hardened.md
+rag-poison-lab attack              # writes to reports/report-naive.md
+rag-poison-lab attack --hardened   # writes to reports/report-hardened.md
 ```
+
+Pass `-o some/path.md` to override the default location. The `reports/` directory is gitignored, so ad-hoc runs do not pollute the repo.
 
 Each run sends 9 LLM requests (4 `direct_override` variants and 5 `markdown_exfil` variants, scored against one probe each). On Claude that costs well under one US cent per run.
 
@@ -120,9 +122,11 @@ The report includes:
 ### Compare across multiple models
 
 ```bash
-rag-poison-lab compare -o comparison-naive.md
-rag-poison-lab compare --hardened -o comparison-hardened.md
+rag-poison-lab compare              # writes to reports/comparison-naive.md
+rag-poison-lab compare --hardened   # writes to reports/comparison-hardened.md
 ```
+
+Pass `-o some/path.md` to override the default location.
 
 Runs the same corpus against the current default model family in one invocation and emits a comparative report. The default family bundles **three Claude models (Opus 4.7, Sonnet 4.6, Haiku 4.5)** plus **Groq's free open-weight `llama-3.3-70b-versatile`**, so a single command produces a frontier-vs-open-weight comparison.
 

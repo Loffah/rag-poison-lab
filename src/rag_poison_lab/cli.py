@@ -94,7 +94,7 @@ def ingest_and_ask(
 @app.command()
 def attack(
     hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
-    output: Path = typer.Option(Path("report.md"), "--output", "-o", help="Where to write the markdown report."),
+    output: Path = typer.Option(None, "--output", "-o", help="Where to write the markdown report. Defaults to reports/report-<mode>.md."),
 ):
     """Run the full attack corpus against the lab and emit a markdown report."""
     from .attacks import all_attacks
@@ -104,6 +104,9 @@ def attack(
     rag = VulnerableRAG(hardened=hardened)
     attacks = all_attacks()
     mode = "hardened" if hardened else "naive"
+    if output is None:
+        Path("reports").mkdir(exist_ok=True)
+        output = Path("reports") / f"report-{mode}.md"
     console.print(f"[bold]{mode} lab[/bold] · {len(attacks)} attacks")
     console.print()
 
@@ -140,7 +143,7 @@ def attack(
 @app.command()
 def compare(
     hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
-    output: Path = typer.Option(Path("comparison.md"), "--output", "-o", help="Where to write the markdown report."),
+    output: Path = typer.Option(None, "--output", "-o", help="Where to write the markdown report. Defaults to reports/comparison-<mode>.md."),
 ):
     """Run the attack corpus across multiple Claude models in one go and emit a comparative report."""
     from .attacks import all_attacks
@@ -151,6 +154,9 @@ def compare(
     specs = DEFAULT_FAMILY
     mode = "hardened" if hardened else "naive"
     total_calls = len(attacks) * len(specs)
+    if output is None:
+        Path("reports").mkdir(exist_ok=True)
+        output = Path("reports") / f"comparison-{mode}.md"
     console.print(
         f"[bold]{mode} lab[/bold] · {len(specs)} models · {len(attacks)} attacks · {total_calls} LLM calls"
     )
