@@ -20,8 +20,3 @@ report-*.md
 comparison-*.md
 reports/
 runs/
-*.cast
-
-# Demo recordings (binary, hosted elsewhere)
-*.mp4
-*.gif

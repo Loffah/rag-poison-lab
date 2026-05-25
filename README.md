@@ -4,8 +4,9 @@ A pentest harness for RAG (Retrieval-Augmented Generation) systems. Probes a tar
 
 Status: under active development.
 
-https://github.com/user-attachments/assets/a1b5d57e-2380-4315-8570-057fb518f1d4
+## Demo
 
+https://github.com/user-attachments/assets/a1b5d57e-2380-4315-8570-057fb518f1d4
 
 ## What this does
 
