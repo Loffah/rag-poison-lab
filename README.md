@@ -15,7 +15,7 @@ This tool tests for that. It ships with:
    - `direct_override`: 4 naked "ignore previous instructions" variants
    - `indirect_injection`: 5 variants that smuggle instructions inside plausible document structure (policy amendments, embedded Q&A, conversational asides, metadata directives, first-person assistant notes)
    - `markdown_exfil`: 5 attempts to coax the model into emitting attacker-controlled image URLs that exfiltrate via the chat UI's auto-fetch
-   - `multilingual_bypass`: 4 variants that phrase the override in less-represented languages (Norwegian, Tagalog, Swahili) or smuggle a foreign-language directive into an English document
+   - `multilingual_bypass`: 5 variants that phrase the override in less-represented languages (Norwegian, Tagalog, Swahili, Japanese) or smuggle a foreign-language directive into an English document
 3. **Family-aware scoring** that detects landings deterministically (canary substring for direct attacks, canary-inside-image-syntax for exfil attacks, so a model refusing the attack while quoting the canary does not count as a landing).
 4. **Markdown reports** with executive summary, landing matrix, expanded landings, and collapsed defeats. Suitable for inclusion in a pentest deliverable.
 5. **Multi-model comparison** (`compare` command) that runs the corpus across multiple Claude models in a single invocation and emits a side-by-side matrix. Useful for picking which model to trust with a confidential RAG deployment.
@@ -208,7 +208,7 @@ A useful way to think about prompt-injection defense is by which architectural l
 - **`direct_override`** (4 variants): `ignore_prior`, `system_tag`, `developer_note`, `continuation_trick`. Naked override patterns. Largely defeated by modern frontier alignment, included as a baseline.
 - **`indirect_injection`** (5 variants): `policy_amendment`, `embedded_qa`, `conversational_aside`, `metadata_directive`, `first_person_assistant`. Instructions woven into plausible document structure. The hypothesis is that these slip past detection more often than naked overrides because nothing in the language pattern looks like a jailbreak attempt; empirical landing rates against the current Claude family are pending the next run.
 - **`markdown_exfil`** (5 variants): `acknowledgment_image`, `verification_badge`, `citation_image`, `format_template`, `context_relay`. Attempts to coerce the model into emitting attacker-controlled image URLs that would exfiltrate when the chat UI fetches them. Defense lives in the chat UI renderer, not the model. Empirically defeated by the Claude family in our runs because the model recognises the pattern; expected to land more often against open-weight or older models.
-- **`multilingual_bypass`** (4 variants): `norwegian_full`, `norwegian_embedded`, `tagalog_override`, `swahili_override`. Same override-style payloads phrased in less-represented languages or smuggled inside an English document. Designed to exploit the English-skewed safety training distribution; pending empirical confirmation.
+- **`multilingual_bypass`** (5 variants): `norwegian_full`, `norwegian_embedded`, `tagalog_override`, `swahili_override`, `japanese_override`. Same override-style payloads phrased in less-represented languages or smuggled inside an English document. Designed to exploit the English-skewed safety training distribution; pending empirical confirmation.
 
 ### Stretch (longer term)
 
