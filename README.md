@@ -6,7 +6,8 @@ Status: under active development.
 
 ## Demo
 
-https://github.com/user-attachments/assets/a1b5d57e-2380-4315-8570-057fb518f1d4
+
+https://github.com/user-attachments/assets/a4cb0e33-d558-4df8-b6f7-38ed0a11511a
 
 ## What this does
 
