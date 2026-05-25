@@ -141,6 +141,20 @@ def attack(
 
 
 @app.command()
+def show(
+    report_path: Path = typer.Argument(..., help="Path to the markdown report to render."),
+    lines: int = typer.Option(None, "--lines", "-n", help="If set, render only the first N lines of the file."),
+):
+    """Pretty-print a markdown report in the terminal (rendered via rich)."""
+    from rich.markdown import Markdown
+
+    text = report_path.read_text()
+    if lines is not None:
+        text = "\n".join(text.splitlines()[:lines])
+    console.print(Markdown(text))
+
+
+@app.command()
 def compare(
     hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
     output: Path = typer.Option(None, "--output", "-o", help="Where to write the markdown report. Defaults to reports/comparison-<mode>.md."),

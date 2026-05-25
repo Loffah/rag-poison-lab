@@ -89,10 +89,10 @@ RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack
 sleep 2
 echo
 
-echo '❯ # Full 4-model comparison report from an earlier run:'
+echo '❯ # Full 4-model comparison report from an earlier run (pretty-rendered):'
 sleep 0.5
-echo '❯ head -55 reports/comparison-naive.md'
-head -55 reports/comparison-naive.md
+echo '❯ uv run rag-poison-lab show reports/comparison-naive.md -n 55'
+uv run rag-poison-lab show reports/comparison-naive.md -n 55
 sleep 2
 EOF
 
