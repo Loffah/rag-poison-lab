@@ -35,18 +35,29 @@ if ! command -v asciinema >/dev/null 2>&1; then
 fi
 
 if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    echo "warning: ANTHROPIC_API_KEY not set in this shell."
-    echo "         The Claude part of the demo will record an error instead of an attack run."
-    sleep 2
+    echo "error: ANTHROPIC_API_KEY is not set." >&2
+    echo "       Set it and re-run:" >&2
+    echo "         export ANTHROPIC_API_KEY=sk-ant-..." >&2
+    exit 1
 fi
 
 if [[ -z "${OPENAI_API_KEY:-}" || -z "${OPENAI_BASE_URL:-}" ]]; then
-    echo "warning: OPENAI_API_KEY or OPENAI_BASE_URL not set."
-    echo "         The Llama (Groq) part of the demo will record an error."
-    echo "         Set both for the full contrast demo:"
-    echo "           export OPENAI_API_KEY=gsk_your_groq_key"
-    echo "           export OPENAI_BASE_URL=https://api.groq.com/openai/v1"
-    sleep 2
+    echo "error: OPENAI_API_KEY or OPENAI_BASE_URL is not set." >&2
+    echo "       The Groq half of the contrast demo would record a 401." >&2
+    echo "       Set both for the full demo:" >&2
+    echo "         export OPENAI_API_KEY=gsk_your_groq_key" >&2
+    echo "         export OPENAI_BASE_URL=https://api.groq.com/openai/v1" >&2
+    exit 1
+fi
+
+# Sanity-check the OpenAI base URL actually looks like Groq, not openai.com itself.
+# If it points at OpenAI but the key is gsk_*, the OpenAI SDK will hit OpenAI's
+# servers with a Groq key and 401 with a confusing 'platform.openai.com' message.
+if [[ ! "$OPENAI_BASE_URL" =~ groq ]] && [[ "${OPENAI_API_KEY}" =~ ^gsk_ ]]; then
+    echo "error: OPENAI_BASE_URL ($OPENAI_BASE_URL) doesn't look like a Groq endpoint" >&2
+    echo "       but OPENAI_API_KEY starts with 'gsk_' (Groq's prefix)." >&2
+    echo "       Set OPENAI_BASE_URL=https://api.groq.com/openai/v1 and re-run." >&2
+    exit 1
 fi
 
 # Pre-flight: make sure reports/comparison-naive.md exists so the demo can
@@ -75,17 +86,22 @@ echo "$OPENAI_API_KEY" | head -c 8; echo
 sleep 1
 echo
 
-echo '❯ # First: run the attack corpus against Claude Opus 4.7 (frontier model)'
+echo '❯ # Trimmed corpus for the demo: just indirect_injection + markdown_exfil'
+echo '❯ # (the families that produced landings in earlier runs)'
 sleep 0.5
-echo '❯ uv run rag-poison-lab attack'
-uv run rag-poison-lab attack
+echo
+
+echo '❯ # First: run against Claude Opus 4.7 (frontier model)'
+sleep 0.5
+echo '❯ uv run rag-poison-lab attack --family indirect_injection,markdown_exfil'
+uv run rag-poison-lab attack --family indirect_injection,markdown_exfil
 sleep 2
 echo
 
-echo '❯ # Now the same corpus against Llama 3.3 70B on Groq (open-weight, less safety RLHF)'
+echo '❯ # Now the same trimmed corpus against Llama 3.3 70B on Groq (open-weight)'
 sleep 0.5
-echo '❯ RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack'
-RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack
+echo '❯ RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack --family indirect_injection,markdown_exfil'
+RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack --family indirect_injection,markdown_exfil
 sleep 2
 echo
 
