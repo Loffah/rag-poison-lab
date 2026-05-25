@@ -181,6 +181,7 @@ def compare(
             progress.advance(overall_task)
 
         def on_model_done(row):
+            # Update the progress line for this model with its final result
             if row.error:
                 progress.update(
                     state["model_task"],
@@ -193,7 +194,22 @@ def compare(
                     state["model_task"],
                     description=f"[{color}]{row.spec.label}: {landed} of {len(row.results)} landed[/]",
                 )
-            # leave the model task line in place so the user sees the per-model result
+
+            # Print the per-attack breakdown above the progress display now,
+            # so the user sees this model's results immediately rather than
+            # waiting for all remaining models to finish.
+            console.print()
+            if row.error:
+                console.print(f"[bold red]{row.spec.label}[/]: error")
+                console.print(f"  {row.error}")
+            else:
+                landed = sum(1 for r in row.results if r.landed)
+                console.print(
+                    f"[bold]{row.spec.label}[/]: {landed} of {len(row.results)} landed"
+                )
+                for r in row.results:
+                    mark = "[green]✓[/green]" if r.landed else "[red]✗[/red]"
+                    console.print(f"  {mark}  {r.attack.family}/{r.attack.payload_id}")
             state["model_task"] = None
 
         rows = run_matrix(
@@ -208,23 +224,10 @@ def compare(
         )
         progress.update(overall_task, description="[bold green]done[/]")
 
-    # Per-model summary block under the progress
-    console.print()
-    for row in rows:
-        if row.error:
-            console.print(f"[bold red]{row.spec.label}[/]: error")
-            console.print(f"  {row.error}")
-            console.print()
-            continue
-        landed = sum(1 for r in row.results if r.landed)
-        head = f"[bold]{row.spec.label}[/]: {landed} of {len(row.results)} landed"
-        console.print(head)
-        for r in row.results:
-            mark = "[green]✓[/green]" if r.landed else "[red]✗[/red]"
-            console.print(f"  {mark}  {r.attack.family}/{r.attack.payload_id}")
-        console.print()
-
+    # Per-model results were already printed live by on_model_done as each
+    # model finished. Just write the full report and tell the user where.
     output.write_text(render_matrix_report(rows, lab_mode=mode))
+    console.print()
     console.print(f"Comparative report written to [bold]{output}[/bold]")
 
 
