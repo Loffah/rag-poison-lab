@@ -21,6 +21,31 @@ app = typer.Typer(no_args_is_help=True, add_completion=False)
 console = Console()
 
 
+def _client_label(client) -> str:
+    """Short human-readable identifier for the LLM client a run is about to
+    use, so the CLI never leaves the operator guessing which model is being
+    hit."""
+    cls = type(client).__name__
+    model = getattr(client, "model", "?")
+    if cls == "AnthropicClient":
+        return f"Anthropic · {model}"
+    if cls == "OpenAIClient":
+        url = getattr(client, "base_url", None) or ""
+        if "groq" in url.lower():
+            return f"Groq · {model}"
+        if "deepseek" in url.lower():
+            return f"DeepSeek · {model}"
+        if "mistral" in url.lower():
+            return f"Mistral · {model}"
+        if url:
+            return f"OpenAI-compatible ({url}) · {model}"
+        return f"OpenAI · {model}"
+    if cls == "OllamaClient":
+        host = getattr(client, "host", "?")
+        return f"Ollama ({host}) · {model}"
+    return f"{cls} · {model}"
+
+
 def _progress() -> Progress:
     """Standard progress widget used by both attack and compare commands."""
     return Progress(
@@ -150,7 +175,9 @@ def attack(
     if output is None:
         Path("reports").mkdir(exist_ok=True)
         output = Path("reports") / f"report-{mode}.md"
-    console.print(f"[bold]{mode} lab[/bold] · {len(attacks)} attacks")
+    console.print(
+        f"[bold]{mode} lab[/bold] · {len(attacks)} attacks · [cyan]{_client_label(rag.llm)}[/cyan]"
+    )
     console.print()
 
     with _progress() as progress:
