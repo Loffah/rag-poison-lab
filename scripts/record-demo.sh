@@ -86,22 +86,22 @@ echo "$OPENAI_API_KEY" | head -c 8; echo
 sleep 1
 echo
 
-echo '❯ # Trimmed corpus for the demo: just indirect_injection + markdown_exfil'
+echo '❯ # Trimmed corpus for the demo: direct_override, indirect_injection, markdown_exfil'
 echo '❯ # (the families that produced landings in earlier runs)'
 sleep 0.5
 echo
 
 echo '❯ # First: run against Claude Opus 4.7 (frontier model)'
 sleep 0.5
-echo '❯ uv run rag-poison-lab attack --family indirect_injection,markdown_exfil'
-uv run rag-poison-lab attack --family indirect_injection,markdown_exfil
+echo '❯ uv run rag-poison-lab attack --family direct_override,indirect_injection,markdown_exfil'
+uv run rag-poison-lab attack --family direct_override,indirect_injection,markdown_exfil
 sleep 2
 echo
 
 echo '❯ # Now the same trimmed corpus against Llama 3.3 70B on Groq (open-weight)'
 sleep 0.5
-echo '❯ RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack --family indirect_injection,markdown_exfil'
-RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack --family indirect_injection,markdown_exfil
+echo '❯ RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack --family direct_override,indirect_injection,markdown_exfil'
+RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack --family direct_override,indirect_injection,markdown_exfil
 sleep 2
 echo
 
