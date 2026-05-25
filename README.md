@@ -108,6 +108,27 @@ rag-poison-lab attack --hardened   # writes to reports/report-hardened.md
 
 Pass `-o some/path.md` to override the default location. The `reports/` directory is gitignored, so ad-hoc runs do not pollute the repo.
 
+To save tokens while iterating, run a subset of the corpus:
+
+```bash
+# Just one family
+rag-poison-lab attack --family direct_override
+
+# Multiple families (comma-separated)
+rag-poison-lab attack --family direct_override,markdown_exfil
+
+# Skip a family
+rag-poison-lab attack --exclude multilingual_bypass
+
+# A single specific attack
+rag-poison-lab attack --only markdown_exfil/citation_image
+
+# See everything that's available
+rag-poison-lab list-attacks
+```
+
+The same flags work on `compare`. `--only markdown_exfil/citation_image` against the default 4-model family sends 4 LLM calls instead of 72.
+
 Each run sends 9 LLM requests (4 `direct_override` variants and 5 `markdown_exfil` variants, scored against one probe each). On Claude that costs well under one US cent per run.
 
 A live progress bar shows which attack is currently running so the terminal doesn't sit silent.

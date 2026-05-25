@@ -49,6 +49,46 @@ _BENIGN_COVER_CORPUS: list[tuple[str, str]] = [
 ]
 
 
+def _filter_attacks(attacks, family: str | None, only: str | None, exclude: str | None):
+    """Apply --family / --only / --exclude filters to the attack list.
+
+    Lets users save tokens by running a subset of the corpus instead of
+    burning credits on a full run for every iteration.
+    """
+    if only:
+        try:
+            target_family, target_payload = only.split("/", 1)
+        except ValueError:
+            raise typer.BadParameter(
+                f"--only must be in 'family/payload_id' format, got: {only!r}"
+            )
+        filtered = [
+            a for a in attacks
+            if a.family == target_family and a.payload_id == target_payload
+        ]
+        if not filtered:
+            raise typer.BadParameter(
+                f"No attack matches --only {only!r}. "
+                "Run 'rag-poison-lab list-attacks' to see available IDs."
+            )
+        return filtered
+
+    if family:
+        wanted = {f.strip() for f in family.split(",")}
+        attacks = [a for a in attacks if a.family in wanted]
+        if not attacks:
+            raise typer.BadParameter(
+                f"No attacks match --family {family!r}. "
+                "Run 'rag-poison-lab list-attacks' to see available families."
+            )
+
+    if exclude:
+        skip = {f.strip() for f in exclude.split(",")}
+        attacks = [a for a in attacks if a.family not in skip]
+
+    return attacks
+
+
 @app.command()
 def demo(
     hardened: bool = typer.Option(False, "--hardened", help="Use the hardened lab configuration."),
@@ -95,14 +135,17 @@ def ingest_and_ask(
 def attack(
     hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
     output: Path = typer.Option(None, "--output", "-o", help="Where to write the markdown report. Defaults to reports/report-<mode>.md."),
+    family: str = typer.Option(None, "--family", help="Comma-separated list of attack families to run (e.g. 'direct_override,markdown_exfil'). Default: all families."),
+    only: str = typer.Option(None, "--only", help="Run a single attack by 'family/payload_id' (e.g. 'markdown_exfil/citation_image')."),
+    exclude: str = typer.Option(None, "--exclude", help="Comma-separated list of families to skip."),
 ):
-    """Run the full attack corpus against the lab and emit a markdown report."""
+    """Run the attack corpus against the lab and emit a markdown report."""
     from .attacks import all_attacks
     from .report import render_report
     from .runner import run_attacks
 
     rag = VulnerableRAG(hardened=hardened)
-    attacks = all_attacks()
+    attacks = _filter_attacks(all_attacks(), family=family, only=only, exclude=exclude)
     mode = "hardened" if hardened else "naive"
     if output is None:
         Path("reports").mkdir(exist_ok=True)
@@ -140,6 +183,27 @@ def attack(
     console.print(f"Report → [bold]{output}[/bold]")
 
 
+@app.command("list-attacks")
+def list_attacks():
+    """List every available attack grouped by family.
+
+    Useful for picking IDs to pass to --family / --only / --exclude on
+    the 'attack' and 'compare' commands."""
+    from .attacks import all_attacks as get_all_attacks
+
+    by_family: dict[str, list] = {}
+    for attack in get_all_attacks():
+        by_family.setdefault(attack.family, []).append(attack)
+
+    for fam_name, fam_attacks in by_family.items():
+        console.print(f"[bold cyan]{fam_name}[/] ({len(fam_attacks)} variants)")
+        for a in fam_attacks:
+            console.print(f"  {fam_name}/{a.payload_id}  [dim]({a.severity})[/dim]")
+        console.print()
+    total = sum(len(v) for v in by_family.values())
+    console.print(f"[bold]{total}[/] attacks across [bold]{len(by_family)}[/] families.")
+
+
 @app.command()
 def show(
     report_path: Path = typer.Argument(..., help="Path to the markdown report to render."),
@@ -158,13 +222,16 @@ def show(
 def compare(
     hardened: bool = typer.Option(False, "--hardened", help="Run against the hardened lab configuration."),
     output: Path = typer.Option(None, "--output", "-o", help="Where to write the markdown report. Defaults to reports/comparison-<mode>.md."),
+    family: str = typer.Option(None, "--family", help="Comma-separated list of attack families to run. Default: all."),
+    only: str = typer.Option(None, "--only", help="Run a single attack by 'family/payload_id'."),
+    exclude: str = typer.Option(None, "--exclude", help="Comma-separated list of families to skip."),
 ):
     """Run the attack corpus across multiple Claude models in one go and emit a comparative report."""
     from .attacks import all_attacks
     from .matrix import DEFAULT_FAMILY, run_matrix
     from .report import render_matrix_report
 
-    attacks = all_attacks()
+    attacks = _filter_attacks(all_attacks(), family=family, only=only, exclude=exclude)
     specs = DEFAULT_FAMILY
     mode = "hardened" if hardened else "naive"
     total_calls = len(attacks) * len(specs)
