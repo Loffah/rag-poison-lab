@@ -11,8 +11,9 @@ RAG systems pull documents into LLM context to answer user questions. The LLM tr
 This tool tests for that. It ships with:
 
 1. A **self-contained vulnerable RAG lab** so you can run attacks against a controllable target without needing a real system.
-2. Two **attack families** so far (see the Attack families section for the full inventory):
+2. Three **attack families** so far (see the Attack families section for the full inventory):
    - `direct_override`: 4 naked "ignore previous instructions" variants
+   - `indirect_injection`: 5 variants that smuggle instructions inside plausible document structure (policy amendments, embedded Q&A, conversational asides, metadata directives, first-person assistant notes)
    - `markdown_exfil`: 5 attempts to coax the model into emitting attacker-controlled image URLs that exfiltrate via the chat UI's auto-fetch
 3. **Family-aware scoring** that detects landings deterministically (canary substring for direct attacks, canary-inside-image-syntax for exfil attacks, so a model refusing the attack while quoting the canary does not count as a landing).
 4. **Markdown reports** with executive summary, landing matrix, expanded landings, and collapsed defeats. Suitable for inclusion in a pentest deliverable.
@@ -176,8 +177,8 @@ A useful way to think about prompt-injection defense is by which architectural l
 | Family | Status | Layer it exploits | Where defense lives |
 |---|---|---|---|
 | `direct_override` | shipped | Model alignment | Model RLHF, strict system prompt |
+| `indirect_injection` | shipped | Model alignment | Model RLHF, instruction/data separation |
 | `markdown_exfil` | shipped | Chat UI renderer | Output sanitization, image-domain allowlist, regex strip at ingest |
-| `indirect_injection` | planned | Model alignment | Model RLHF, instruction/data separation |
 | `multilingual_bypass` | planned | Training distribution | More multilingual safety training |
 | `hidden_text` | stretch | Document parser | Sanitization at the ingest boundary |
 | `tool_call_hijack` | stretch | Agent's tool surface | Authorization layer, human-in-the-loop |
@@ -189,11 +190,11 @@ A useful way to think about prompt-injection defense is by which architectural l
 ### Shipped
 
 - **`direct_override`** (4 variants): `ignore_prior`, `system_tag`, `developer_note`, `continuation_trick`. Naked override patterns. Largely defeated by modern frontier alignment, included as a baseline.
+- **`indirect_injection`** (5 variants): `policy_amendment`, `embedded_qa`, `conversational_aside`, `metadata_directive`, `first_person_assistant`. Instructions woven into plausible document structure. Harder for the model to detect than naked overrides because nothing in the language pattern looks like a jailbreak attempt.
 - **`markdown_exfil`** (5 variants): `acknowledgment_image`, `verification_badge`, `citation_image`, `format_template`, `context_relay`. Coerces the model into emitting attacker-controlled image URLs that exfiltrate when the chat UI fetches them.
 
 ### Planned (next builds)
 
-- **`indirect_injection`**: instructions woven naturally into plausible document prose. Harder to detect than naked overrides because the language pattern does not match the model's "this is a jailbreak attempt" classifiers.
 - **`multilingual_bypass`**: same attacks in less-represented languages (Norwegian, Tagalog, Swahili). Exploits the English-skewed safety training distribution.
 
 ### Stretch (longer term)
