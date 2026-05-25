@@ -107,11 +107,11 @@ This ingests two benign documents (a refund policy and an office-hours blurb), r
 ### Run the attack corpus
 
 ```bash
-rag-poison-lab attack              # writes to reports/report-naive.md
-rag-poison-lab attack --hardened   # writes to reports/report-hardened.md
+rag-poison-lab attack              # writes to reports/report-<model>-naive.md
+rag-poison-lab attack --hardened   # writes to reports/report-<model>-hardened.md
 ```
 
-Pass `-o some/path.md` to override the default location. The `reports/` directory is gitignored, so ad-hoc runs do not pollute the repo.
+The default filename embeds the active model (e.g. `report-claude-opus-4-7-naive.md` or `report-llama-3-3-70b-versatile-naive.md`) so running back-to-back against different backends never overwrites a previous report. Pass `-o some/path.md` to override. The `reports/` directory is locally ignored, so ad-hoc runs do not pollute the repo.
 
 To save tokens while iterating, run a subset of the corpus:
 

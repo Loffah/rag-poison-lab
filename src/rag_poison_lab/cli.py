@@ -46,6 +46,18 @@ def _client_label(client) -> str:
     return f"{cls} · {model}"
 
 
+def _model_slug(client) -> str:
+    """Filesystem-safe identifier for the model the client wraps. Used to
+    build default report paths so two runs against different backends don't
+    overwrite each other."""
+    import re as _re
+
+    model = getattr(client, "model", "unknown")
+    slug = _re.sub(r"[^a-zA-Z0-9-]+", "-", str(model))
+    slug = _re.sub(r"-+", "-", slug)
+    return slug.strip("-").lower() or "unknown"
+
+
 def _progress() -> Progress:
     """Standard progress widget used by both attack and compare commands."""
     return Progress(
@@ -174,7 +186,7 @@ def attack(
     mode = "hardened" if hardened else "naive"
     if output is None:
         Path("reports").mkdir(exist_ok=True)
-        output = Path("reports") / f"report-{mode}.md"
+        output = Path("reports") / f"report-{_model_slug(rag.llm)}-{mode}.md"
     console.print(
         f"[bold]{mode} lab[/bold] · {len(attacks)} attacks · [cyan]{_client_label(rag.llm)}[/cyan]"
     )
