@@ -28,6 +28,8 @@ This tool tests for that. It ships with:
 
 > **Note on framing.** In our runs against the Claude family in naive mode, every attack variant in the current corpus was defeated. The frontier models actively recognize these patterns and refuse, often explaining the attempt to the user. That's a real finding about model-side alignment maturity, not a tool failure. The tool's primary value is **comparative measurement**: same corpus, multiple models, multiple lab configurations. The deltas (frontier vs open-weight, naive vs hardened) are what matter for picking which model to trust with a confidential RAG deployment.
 
+> **Note on stochasticity.** Attack landings are probabilistic. Model behavior varies between runs, so the same attack against the same model can land in one run and be defeated in the next. Against frontier-aligned models the per-attack landing rate is low but non-zero; against weaker or open-weight models it's high but still not deterministic. The matrix in any single report is one sample of that distribution. Conclusions about a model's susceptibility should be drawn from multiple runs, not a single matrix.
+
 ## Why this exists
 
 Enterprises are deploying RAG over confidential corpora (operations data, contracts, internal docs). The threat model is simple: if you can plant text in someone's ingestion path, you can hijack their agent. That surface is real, the defenses are uneven across models, and the variance is what defenders need to measure when they pick a model. This is a working tool to make that measurement reproducible.
