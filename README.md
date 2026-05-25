@@ -11,18 +11,21 @@ RAG systems pull documents into LLM context to answer user questions. The LLM tr
 This tool tests for that. It ships with:
 
 1. A **self-contained vulnerable RAG lab** so you can run attacks against a controllable target without needing a real system.
-2. Three **attack families** so far (see the Attack families section for the full inventory):
+2. Four **attack families** so far (see the Attack families section for the full inventory):
    - `direct_override`: 4 naked "ignore previous instructions" variants
    - `indirect_injection`: 5 variants that smuggle instructions inside plausible document structure (policy amendments, embedded Q&A, conversational asides, metadata directives, first-person assistant notes)
    - `markdown_exfil`: 5 attempts to coax the model into emitting attacker-controlled image URLs that exfiltrate via the chat UI's auto-fetch
+   - `multilingual_bypass`: 4 variants that phrase the override in less-represented languages (Norwegian, Tagalog, Swahili) or smuggle a foreign-language directive into an English document
 3. **Family-aware scoring** that detects landings deterministically (canary substring for direct attacks, canary-inside-image-syntax for exfil attacks, so a model refusing the attack while quoting the canary does not count as a landing).
 4. **Markdown reports** with executive summary, landing matrix, expanded landings, and collapsed defeats. Suitable for inclusion in a pentest deliverable.
 5. **Multi-model comparison** (`compare` command) that runs the corpus across multiple Claude models in a single invocation and emits a side-by-side matrix. Useful for picking which model to trust with a confidential RAG deployment.
 6. A **mitigations toggle** so you can compare naive vs hardened RAG configurations and see which attack families survive proper defenses.
 
+> **Note on framing.** In our runs against the Claude family in naive mode, every attack variant in the current corpus was defeated. The frontier models actively recognize these patterns and refuse, often explaining the attempt to the user. That's a real finding about model-side alignment maturity, not a tool failure. The tool's primary value is **comparative measurement**: same corpus, multiple models, multiple lab configurations. The deltas (frontier vs open-weight, naive vs hardened) are what matter for picking which model to trust with a confidential RAG deployment.
+
 ## Why this exists
 
-Enterprises are deploying RAG over confidential corpora (operations data, contracts, internal docs). The threat model is simple: if you can plant text in someone's ingestion path, you can hijack their agent. That surface is real but under-tested. This is a working tool to make it measurable.
+Enterprises are deploying RAG over confidential corpora (operations data, contracts, internal docs). The threat model is simple: if you can plant text in someone's ingestion path, you can hijack their agent. That surface is real, the defenses are uneven across models, and the variance is what defenders need to measure when they pick a model. This is a working tool to make that measurement reproducible.
 
 ## Quickstart
 
@@ -142,7 +145,7 @@ The interesting comparison is naive vs hardened. The hardened mode applies three
 2. Uses a stricter system prompt that explicitly tells the model to treat tagged content as data, not as instructions
 3. Strips markdown image syntax from retrieved content at ingest time, before the model ever sees it
 
-The naive-vs-hardened delta is the architectural-mitigation demonstration. Against current frontier models (Claude Opus 4.7) both modes may show zero landings because the model defends on its own. Against weaker or open-weight models the delta becomes more interesting.
+The naive-vs-hardened delta is the architectural-mitigation demonstration. Against the current Claude family both modes show zero landings in our runs because the model defends on its own; the delta is uninformative there. Against weaker or open-weight models the delta is expected to be larger, which is when the hardened-mode mitigations earn their keep. The mitigations are useful in production regardless because they don't depend on the model's alignment to hold the line.
 
 ## Backends
 
@@ -156,7 +159,7 @@ The tool ships with three native backends behind a uniform interface:
 
 Backend selection auto-detects by env key. Force a specific backend with `RAG_POISON_LAB_BACKEND=anthropic|openai|ollama`.
 
-> **Tested coverage:** so far the tool has been exercised end-to-end against Anthropic (Claude) only. The OpenAI client and the OpenAI-compatible providers below are wired up but unvalidated. If you run against one and something behaves unexpectedly, file an issue.
+> **Tested coverage:** the tool has been exercised against the Claude family (Opus 4.7, Sonnet 4.6, Haiku 4.5). In every naive-mode run to date, all current attack variants were defeated by Claude alignment, often with the model explicitly flagging the injection attempt to the user. The next planned run target is Groq's open-weight `llama-3.3-70b-versatile` to establish a comparison baseline. The OpenAI client and other OpenAI-compatible providers below are wired up but unvalidated end-to-end. If you run against one and something behaves unexpectedly, file an issue.
 
 ### OpenAI-compatible providers
 
@@ -199,9 +202,9 @@ A useful way to think about prompt-injection defense is by which architectural l
 ### Shipped
 
 - **`direct_override`** (4 variants): `ignore_prior`, `system_tag`, `developer_note`, `continuation_trick`. Naked override patterns. Largely defeated by modern frontier alignment, included as a baseline.
-- **`indirect_injection`** (5 variants): `policy_amendment`, `embedded_qa`, `conversational_aside`, `metadata_directive`, `first_person_assistant`. Instructions woven into plausible document structure. Harder for the model to detect than naked overrides because nothing in the language pattern looks like a jailbreak attempt.
-- **`markdown_exfil`** (5 variants): `acknowledgment_image`, `verification_badge`, `citation_image`, `format_template`, `context_relay`. Coerces the model into emitting attacker-controlled image URLs that exfiltrate when the chat UI fetches them.
-- **`multilingual_bypass`** (4 variants): `norwegian_full`, `norwegian_embedded`, `tagalog_override`, `swahili_override`. Same override-style payloads but phrased in less-represented languages or smuggled inside an English document, exploiting the English-skewed safety training distribution.
+- **`indirect_injection`** (5 variants): `policy_amendment`, `embedded_qa`, `conversational_aside`, `metadata_directive`, `first_person_assistant`. Instructions woven into plausible document structure. The hypothesis is that these slip past detection more often than naked overrides because nothing in the language pattern looks like a jailbreak attempt; empirical landing rates against the current Claude family are pending the next run.
+- **`markdown_exfil`** (5 variants): `acknowledgment_image`, `verification_badge`, `citation_image`, `format_template`, `context_relay`. Attempts to coerce the model into emitting attacker-controlled image URLs that would exfiltrate when the chat UI fetches them. Defense lives in the chat UI renderer, not the model. Empirically defeated by the Claude family in our runs because the model recognises the pattern; expected to land more often against open-weight or older models.
+- **`multilingual_bypass`** (4 variants): `norwegian_full`, `norwegian_embedded`, `tagalog_override`, `swahili_override`. Same override-style payloads phrased in less-represented languages or smuggled inside an English document. Designed to exploit the English-skewed safety training distribution; pending empirical confirmation.
 
 ### Stretch (longer term)
 
