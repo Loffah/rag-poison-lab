@@ -210,11 +210,20 @@ def show(
     lines: int = typer.Option(None, "--lines", "-n", help="If set, render only the first N lines of the file."),
 ):
     """Pretty-print a markdown report in the terminal (rendered via rich)."""
+    import re
+
     from rich.markdown import Markdown
 
     text = report_path.read_text()
     if lines is not None:
         text = "\n".join(text.splitlines()[:lines])
+
+    # Strip in-document anchor links ([text](#anchor)). They're useful in
+    # GitHub/Obsidian where they navigate, but in a terminal rich renders
+    # them as underlined hyperlinks that don't go anywhere and add visual
+    # noise. External http(s) links are preserved.
+    text = re.sub(r"\[([^\]]+)\]\(#[^)]+\)", r"\1", text)
+
     console.print(Markdown(text))
 
 
