@@ -4,6 +4,16 @@ A pentest harness for RAG (Retrieval-Augmented Generation) systems. Probes a tar
 
 Status: under active development.
 
+<!--
+Demo video lives below. After running scripts/record-demo.sh and
+scripts/cast-to-mp4.sh, follow the upload steps the script prints and
+paste the resulting GitHub user-attachments URL on its own line below.
+GitHub auto-embeds it as a seekable video player.
+-->
+
+<!-- DEMO_VIDEO_URL_HERE -->
+
+
 ## What this does
 
 RAG systems pull documents into LLM context to answer user questions. The LLM treats those documents as trusted context. If an attacker can plant content in the corpus (via a supplier portal, parsed email, scraped web source, etc.), they can inject instructions the model will follow.
