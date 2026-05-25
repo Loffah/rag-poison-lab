@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Record a clean asciinema demo of rag-poison-lab.
 #
-# Follows the "hybrid" demo flow:
-#   1. Show that ANTHROPIC_API_KEY is set (first 12 chars only, to prove env
-#      is wired up without leaking the key).
-#   2. Run the single-model `attack` command live, so the viewer sees the
-#      progress bars + per-attack landings stream in.
-#   3. Cat the head of a pre-generated `compare` report so the viewer also
-#      sees the multi-model matrix output without having to wait for the
-#      full 4-model run (~3 minutes).
+# Follows the contrast-led demo flow:
+#   1. Show env keys are set (first chars only, to prove without leaking).
+#   2. Live `attack` against Claude Opus 4.7 (frontier). Most attacks
+#      defeated, demonstrates the model recognising injection attempts.
+#   3. Same `attack` against Llama 3.3 70B on Groq (open-weight). Most
+#      attacks land, demonstrating the comparative-measurement story.
+#   4. Cat the head of a pre-generated `compare` report so the viewer
+#      sees the multi-model matrix without waiting for the full 4-model
+#      run (~3 minutes).
 #
 # If reports/comparison-naive.md doesn't exist yet, this script runs
 # `compare` once first to generate it.
@@ -35,8 +36,16 @@ fi
 
 if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
     echo "warning: ANTHROPIC_API_KEY not set in this shell."
-    echo "         The demo will record an error message instead of an attack run."
-    echo "         Set it and re-run for a clean demo."
+    echo "         The Claude part of the demo will record an error instead of an attack run."
+    sleep 2
+fi
+
+if [[ -z "${OPENAI_API_KEY:-}" || -z "${OPENAI_BASE_URL:-}" ]]; then
+    echo "warning: OPENAI_API_KEY or OPENAI_BASE_URL not set."
+    echo "         The Llama (Groq) part of the demo will record an error."
+    echo "         Set both for the full contrast demo:"
+    echo "           export OPENAI_API_KEY=gsk_your_groq_key"
+    echo "           export OPENAI_BASE_URL=https://api.groq.com/openai/v1"
     sleep 2
 fi
 
@@ -58,17 +67,29 @@ cat > "$INNER_SCRIPT" << 'EOF'
 PS1='%F{green}❯%f '
 clear
 
+echo '❯ # Keys are set (showing first chars only):'
 echo '❯ echo "$ANTHROPIC_API_KEY" | head -c 12; echo'
 echo "$ANTHROPIC_API_KEY" | head -c 12; echo
+echo '❯ echo "$OPENAI_API_KEY" | head -c 8; echo'
+echo "$OPENAI_API_KEY" | head -c 8; echo
 sleep 1
 echo
 
+echo '❯ # First: run the attack corpus against Claude Opus 4.7 (frontier model)'
+sleep 0.5
 echo '❯ uv run rag-poison-lab attack'
 uv run rag-poison-lab attack
-sleep 1
+sleep 2
 echo
 
-echo '❯ # Full 4-model comparison was generated earlier. Showing the matrix:'
+echo '❯ # Now the same corpus against Llama 3.3 70B on Groq (open-weight, less safety RLHF)'
+sleep 0.5
+echo '❯ RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack'
+RAG_POISON_LAB_BACKEND=openai uv run rag-poison-lab attack
+sleep 2
+echo
+
+echo '❯ # Full 4-model comparison report from an earlier run:'
 sleep 0.5
 echo '❯ head -55 reports/comparison-naive.md'
 head -55 reports/comparison-naive.md
