@@ -4,14 +4,7 @@ A pentest harness for RAG (Retrieval-Augmented Generation) systems. Probes a tar
 
 Status: under active development.
 
-<!--
-Demo video lives below. After running scripts/record-demo.sh and
-scripts/cast-to-mp4.sh, follow the upload steps the script prints and
-paste the resulting GitHub user-attachments URL on its own line below.
-GitHub auto-embeds it as a seekable video player.
--->
-
-<!-- DEMO_VIDEO_URL_HERE -->
+https://github.com/user-attachments/assets/a1b5d57e-2380-4315-8570-057fb518f1d4
 
 
 ## What this does
