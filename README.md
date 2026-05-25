@@ -179,7 +179,7 @@ The tool ships with three native backends behind a uniform interface:
 | Backend | Env var | Default model | Notes |
 |---|---|---|---|
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-7` | Override with `ANTHROPIC_MODEL` |
-| OpenAI    | `OPENAI_API_KEY`    | `gpt-4o`          | Override with `OPENAI_MODEL`. Set `OPENAI_BASE_URL` for any OpenAI-compatible endpoint (see below) |
+| OpenAI    | `OPENAI_API_KEY`    | `gpt-4o`          | Override with `OPENAI_MODEL`. Set `OPENAI_BASE_URL` for any OpenAI-compatible endpoint (see below). `gsk_*` keys auto-route to Groq with a llama-3.3-70b default — no `OPENAI_BASE_URL` needed. |
 | Ollama    | (none)              | `llama3.1`        | Local fallback. Override host with `OLLAMA_HOST`, model with `OLLAMA_MODEL` |
 
 Backend selection auto-detects by env key. Force a specific backend with `RAG_POISON_LAB_BACKEND=anthropic|openai|ollama`.

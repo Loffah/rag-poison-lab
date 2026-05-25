@@ -41,6 +41,35 @@ def _env_default(key: str, fallback: str) -> str:
     return os.environ.get(key, fallback)
 
 
+def _detect_openai_base_url() -> str | None:
+    """If OPENAI_BASE_URL is set, use it. Otherwise infer from the key prefix:
+    a 'gsk_*' key is a Groq key and should route to Groq's OpenAI-compatible
+    endpoint rather than api.openai.com (which would 401 with a confusing
+    message). Returns None for non-Groq OpenAI keys so the SDK uses its
+    default api.openai.com.
+    """
+    explicit = os.environ.get("OPENAI_BASE_URL")
+    if explicit:
+        return explicit
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if key.startswith("gsk_"):
+        return "https://api.groq.com/openai/v1"
+    return None
+
+
+def _detect_openai_model() -> str:
+    """If OPENAI_MODEL is set, use it. Otherwise pick a sensible default for
+    the detected provider: a Groq key gets a llama default since gpt-4o
+    does not exist on Groq."""
+    explicit = os.environ.get("OPENAI_MODEL")
+    if explicit:
+        return explicit
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if key.startswith("gsk_"):
+        return "llama-3.3-70b-versatile"
+    return "gpt-4o"
+
+
 @dataclass
 class AnthropicClient:
     model: str = field(default_factory=lambda: _env_default("ANTHROPIC_MODEL", "claude-opus-4-7"))
@@ -61,8 +90,8 @@ class AnthropicClient:
 
 @dataclass
 class OpenAIClient:
-    model: str = field(default_factory=lambda: _env_default("OPENAI_MODEL", "gpt-4o"))
-    base_url: str | None = field(default_factory=lambda: os.environ.get("OPENAI_BASE_URL"))
+    model: str = field(default_factory=_detect_openai_model)
+    base_url: str | None = field(default_factory=_detect_openai_base_url)
     max_tokens: int = 1024
 
     def generate(self, system: str, user: str) -> str:

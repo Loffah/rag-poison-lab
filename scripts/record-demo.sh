@@ -41,22 +41,25 @@ if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
     exit 1
 fi
 
-if [[ -z "${OPENAI_API_KEY:-}" || -z "${OPENAI_BASE_URL:-}" ]]; then
-    echo "error: OPENAI_API_KEY or OPENAI_BASE_URL is not set." >&2
-    echo "       The Groq half of the contrast demo would record a 401." >&2
-    echo "       Set both for the full demo:" >&2
+if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    echo "error: OPENAI_API_KEY is not set." >&2
+    echo "       The Groq half of the contrast demo would have nothing to authenticate with." >&2
+    echo "       Set it (Groq keys start with 'gsk_') and re-run:" >&2
     echo "         export OPENAI_API_KEY=gsk_your_groq_key" >&2
-    echo "         export OPENAI_BASE_URL=https://api.groq.com/openai/v1" >&2
     exit 1
 fi
 
-# Sanity-check the OpenAI base URL actually looks like Groq, not openai.com itself.
-# If it points at OpenAI but the key is gsk_*, the OpenAI SDK will hit OpenAI's
-# servers with a Groq key and 401 with a confusing 'platform.openai.com' message.
-if [[ ! "$OPENAI_BASE_URL" =~ groq ]] && [[ "${OPENAI_API_KEY}" =~ ^gsk_ ]]; then
-    echo "error: OPENAI_BASE_URL ($OPENAI_BASE_URL) doesn't look like a Groq endpoint" >&2
-    echo "       but OPENAI_API_KEY starts with 'gsk_' (Groq's prefix)." >&2
-    echo "       Set OPENAI_BASE_URL=https://api.groq.com/openai/v1 and re-run." >&2
+# If the user has a Groq key but explicitly set OPENAI_BASE_URL to something
+# else, that's almost always a mistake (OpenAI SDK would hit the wrong server
+# and 401). The tool itself auto-routes 'gsk_*' to Groq, but only when the env
+# var is unset, so warn loudly here.
+if [[ -n "${OPENAI_BASE_URL:-}" ]] \
+    && [[ ! "$OPENAI_BASE_URL" =~ groq ]] \
+    && [[ "${OPENAI_API_KEY}" =~ ^gsk_ ]]; then
+    echo "error: OPENAI_API_KEY starts with 'gsk_' (Groq) but OPENAI_BASE_URL" >&2
+    echo "       is set to '$OPENAI_BASE_URL' which doesn't look like a Groq endpoint." >&2
+    echo "       Either unset OPENAI_BASE_URL (the tool will auto-route Groq keys)," >&2
+    echo "       or set it to: https://api.groq.com/openai/v1" >&2
     exit 1
 fi
 
