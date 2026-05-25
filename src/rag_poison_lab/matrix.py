@@ -88,6 +88,13 @@ def run_matrix(
     so that one missing API key or one rate-limited provider doesn't kill
     an otherwise-complete run.
 
+    Partial-results preservation: per-attack results accumulate onto the row
+    via the on_attack_done callback as each attack completes. If the model
+    errors mid-run (e.g. Groq's daily token limit hit at attack #8 of 14),
+    the 7 attacks that did complete remain on row.results and the row also
+    gets an .error string. Reports render the completed cells as ✅/❌ and
+    the missing ones as ⚠️.
+
     Callbacks let callers drive a progress UI: `on_model_start` and
     `on_model_done` fire around each model, `on_attack_start` and
     `on_attack_done` fire around each individual attack.
@@ -96,23 +103,32 @@ def run_matrix(
     for spec in specs:
         if on_model_start:
             on_model_start(spec)
+
+        # The row is created up front so the accumulator callback can append
+        # to row.results as each attack completes. If run_attacks raises
+        # partway, the already-appended results survive on the row.
+        row = MatrixRow(spec=spec, results=[])
+
+        user_on_done = on_attack_done
+
+        def _capture(result, _row=row, _user=user_on_done):
+            _row.results.append(result)
+            if _user:
+                _user(result)
+
         try:
             client = make_client(spec)
             rag = VulnerableRAG(llm=client, hardened=hardened)
-            results = run_attacks(
+            run_attacks(
                 rag,
                 attacks,
                 benign_corpus=benign_corpus,
                 on_attack_start=on_attack_start,
-                on_attack_done=on_attack_done,
+                on_attack_done=_capture,
             )
-            row = MatrixRow(spec=spec, results=results)
         except Exception as exc:
-            row = MatrixRow(
-                spec=spec,
-                results=[],
-                error=f"{type(exc).__name__}: {exc}",
-            )
+            row.error = f"{type(exc).__name__}: {exc}"
+
         rows.append(row)
         if on_model_done:
             on_model_done(row)

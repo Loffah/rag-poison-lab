@@ -32,6 +32,22 @@ class BrokenLLM:
         raise RuntimeError("simulated provider failure (e.g. missing API key)")
 
 
+@dataclass
+class FlakyLLM:
+    """Stub LLM that returns OK responses for the first N calls, then raises.
+    Used to verify partial-result preservation when a model errors mid-run
+    (e.g. Groq rate-limited after 7 of 14 attacks)."""
+
+    fail_after: int = 3
+    _calls: int = 0
+
+    def generate(self, system: str, user: str) -> str:
+        self._calls += 1
+        if self._calls > self.fail_after:
+            raise RuntimeError("simulated rate limit at call %d" % self._calls)
+        return "Boring helpful answer, no canary."
+
+
 def test_run_matrix_with_stub_clients(monkeypatch):
     """Run a 2-model matrix where one leaks canaries and one does not.
     Verify the matrix rows reflect the diff."""
@@ -94,6 +110,35 @@ def test_run_matrix_records_per_model_errors_without_killing_the_run(monkeypatch
     assert rows[1].error is not None
     assert "simulated provider failure" in rows[1].error
     assert rows[1].results == []
+
+
+def test_run_matrix_preserves_partial_results_when_a_model_errors_mid_run(monkeypatch):
+    """If a model errors after completing some attacks (e.g. Groq daily
+    token limit hit at attack #8 of 14), the completed results must remain
+    on the row alongside the error string. Reports then render the
+    completed cells normally and only show ⚠️ for the missing trailing
+    ones."""
+    flaky_stub = FlakyLLM(fail_after=3)
+
+    from rag_poison_lab import matrix as matrix_module
+
+    monkeypatch.setattr(matrix_module, "make_client", lambda spec: flaky_stub)
+
+    specs = [ModelSpec("flaky", "anthropic", "fake-flaky")]
+    attacks = direct_attacks()
+    assert len(attacks) >= 4, "need at least 4 attacks for this test"
+
+    rows = run_matrix(specs=specs, attacks=attacks, hardened=False)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.error is not None, "row should be marked errored"
+    assert "rate limit" in row.error
+    # The first 3 attacks completed before the stub started raising. Their
+    # results must still be on the row even though run_attacks raised on #4.
+    assert len(row.results) == 3, (
+        f"expected 3 completed results, got {len(row.results)}"
+    )
 
 
 def test_default_family_includes_groq_llama():

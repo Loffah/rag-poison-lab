@@ -116,21 +116,24 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     3. Landings section (only the attacks that succeeded), expanded by default
     4. Defeated attacks, collapsed inside <details> for cleanliness
 
-    Rows with `error` set (one model failed mid-run, e.g. missing API key
-    or rate limit) are surfaced in their own section and shown as warnings
-    in matrix cells, but do not drop the column or block the rest of the
-    report.
+    Rows with `error` set (one model failed mid-run, e.g. rate limit hit)
+    are surfaced in their own section. If they errored before completing
+    any attacks they show ⚠️ across the whole row; if they errored partway,
+    the completed cells render normally as ✅/❌ and the missing trailing
+    cells show ⚠️.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     model_count = len(rows)
     ok_rows = [row for row in rows if not row.error]
     errored_rows = [row for row in rows if row.error]
-    attack_count = max((len(row.results) for row in ok_rows), default=0)
-    total_runs = len(ok_rows) * attack_count
-    total_landings = sum(sum(1 for r in row.results if r.landed) for row in ok_rows)
+    # attack_count: take the max across any row that ran any attacks. A
+    # partially-errored row still informs us how many attacks were planned.
+    attack_count = max((len(row.results) for row in rows if row.results), default=0)
+    total_runs = sum(len(row.results) for row in rows)
+    total_landings = sum(sum(1 for r in row.results if r.landed) for row in rows)
 
     def _row_landed_at(row: MatrixRow, idx: int) -> bool:
-        return not row.error and idx < len(row.results) and row.results[idx].landed
+        return idx < len(row.results) and row.results[idx].landed
 
     landed_indices = [
         i for i in range(attack_count) if any(_row_landed_at(row, i) for row in rows)
@@ -161,11 +164,27 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
             f"({lab_mode} lab configuration). All attacks defeated across all completed models."
         )
     if errored_rows:
+        partial_errored = [r for r in errored_rows if r.results]
+        full_errored = [r for r in errored_rows if not r.results]
         lines.append("")
-        lines.append(
-            f"> ⚠️ **{len(errored_rows)} of {model_count} models errored** during this run "
-            "and produced no results. See the Errors section below."
-        )
+        if partial_errored and full_errored:
+            lines.append(
+                f"> ⚠️ **{len(errored_rows)} of {model_count} models errored** "
+                f"during this run "
+                f"({len(partial_errored)} partial, {len(full_errored)} with no results). "
+                "See the Errors section below."
+            )
+        elif partial_errored:
+            lines.append(
+                f"> ⚠️ **{len(partial_errored)} of {model_count} models errored partway through** "
+                "(completed cells are preserved, missing cells show ⚠️). "
+                "See the Errors section below."
+            )
+        else:
+            lines.append(
+                f"> ⚠️ **{len(full_errored)} of {model_count} models errored** "
+                "and produced no results. See the Errors section below."
+            )
     lines.append("")
 
     # Metadata table
@@ -194,29 +213,37 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     separator = " | ".join([":-:"] * model_count)
     lines.append(f"|:--| {separator} |")
 
-    if ok_rows:
+    # Find any row that has results, so we can pull the attack metadata
+    # for each row of the matrix (any row's results[i] is the same attack).
+    rows_with_results = [row for row in rows if row.results]
+    if rows_with_results:
         for i in range(attack_count):
-            attack = ok_rows[0].results[i].attack
+            attack = rows_with_results[0].results[i].attack
             anchor_text = f"a{i + 1:02d} {attack.family} {attack.payload_id}"
             anchor_slug = _slug(anchor_text)
             attack_label = f"[`{attack.family}` / `{attack.payload_id}`](#{anchor_slug})"
             cells: list[str] = []
             for row in rows:
-                if row.error:
+                if i < len(row.results):
+                    cells.append("✅" if row.results[i].landed else "❌")
+                elif row.error:
+                    # Model errored before reaching this attack
                     cells.append("⚠️")
-                elif i < len(row.results) and row.results[i].landed:
-                    cells.append("✅")
                 else:
-                    cells.append("❌")
+                    # Shouldn't normally happen, but be defensive
+                    cells.append("⚠️")
             cells_str = " | ".join(cells)
             lines.append(f"| {attack_label} | {cells_str} |")
 
     totals = []
     for row in rows:
-        if row.error:
+        completed = len(row.results)
+        landed = sum(1 for r in row.results if r.landed)
+        if row.error and completed == 0:
             totals.append("**errored**")
+        elif row.error:
+            totals.append(f"**{landed} / {completed}** *(errored after {completed} of {attack_count})*")
         else:
-            landed = sum(1 for r in row.results if r.landed)
             totals.append(f"**{landed} / {attack_count}**")
     totals_str = " | ".join(totals)
     lines.append(f"| **Total** | {totals_str} |")
@@ -226,26 +253,35 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     lines.append("## By model")
     lines.append("")
     for row in rows:
-        if row.error:
+        completed = len(row.results)
+        landed_names = [
+            f"`{r.attack.family}/{r.attack.payload_id}`" for r in row.results if r.landed
+        ]
+        landed_count = len(landed_names)
+        partial = row.error and completed > 0
+
+        if row.error and completed == 0:
             lines.append(
                 f"- **{row.spec.label}** (`{row.spec.model}`): "
                 f"⚠️ errored, no results recorded"
             )
             continue
-        landed_names = [
-            f"`{r.attack.family}/{r.attack.payload_id}`" for r in row.results if r.landed
-        ]
-        landed_count = len(landed_names)
+
+        suffix = ""
+        if partial:
+            suffix = f" *(errored after {completed} of {attack_count})*"
+
+        denominator = completed if partial else attack_count
         if landed_count:
             landed_str = ", ".join(landed_names)
             lines.append(
                 f"- **{row.spec.label}** (`{row.spec.model}`): "
-                f"**{landed_count} of {attack_count} landed**: {landed_str}"
+                f"**{landed_count} of {denominator} landed**{suffix}: {landed_str}"
             )
         else:
             lines.append(
                 f"- **{row.spec.label}** (`{row.spec.model}`): "
-                f"0 of {attack_count} landed, all attacks defeated"
+                f"0 of {denominator} landed, all completed attacks defeated{suffix}"
             )
     lines.append("")
 
