@@ -179,7 +179,7 @@ A useful way to think about prompt-injection defense is by which architectural l
 | `direct_override` | shipped | Model alignment | Model RLHF, strict system prompt |
 | `indirect_injection` | shipped | Model alignment | Model RLHF, instruction/data separation |
 | `markdown_exfil` | shipped | Chat UI renderer | Output sanitization, image-domain allowlist, regex strip at ingest |
-| `multilingual_bypass` | planned | Training distribution | More multilingual safety training |
+| `multilingual_bypass` | shipped | Training distribution | More multilingual safety training |
 | `hidden_text` | stretch | Document parser | Sanitization at the ingest boundary |
 | `tool_call_hijack` | stretch | Agent's tool surface | Authorization layer, human-in-the-loop |
 | `multi_hop` | stretch | Retrieval system | Document provenance, content classifiers |
@@ -192,10 +192,7 @@ A useful way to think about prompt-injection defense is by which architectural l
 - **`direct_override`** (4 variants): `ignore_prior`, `system_tag`, `developer_note`, `continuation_trick`. Naked override patterns. Largely defeated by modern frontier alignment, included as a baseline.
 - **`indirect_injection`** (5 variants): `policy_amendment`, `embedded_qa`, `conversational_aside`, `metadata_directive`, `first_person_assistant`. Instructions woven into plausible document structure. Harder for the model to detect than naked overrides because nothing in the language pattern looks like a jailbreak attempt.
 - **`markdown_exfil`** (5 variants): `acknowledgment_image`, `verification_badge`, `citation_image`, `format_template`, `context_relay`. Coerces the model into emitting attacker-controlled image URLs that exfiltrate when the chat UI fetches them.
-
-### Planned (next builds)
-
-- **`multilingual_bypass`**: same attacks in less-represented languages (Norwegian, Tagalog, Swahili). Exploits the English-skewed safety training distribution.
+- **`multilingual_bypass`** (4 variants): `norwegian_full`, `norwegian_embedded`, `tagalog_override`, `swahili_override`. Same override-style payloads but phrased in less-represented languages or smuggled inside an English document, exploiting the English-skewed safety training distribution.
 
 ### Stretch (longer term)
 

@@ -6,6 +6,7 @@ from .base import Attack
 from .direct import all_attacks as _direct_attacks
 from .indirect_injection import all_attacks as _indirect_injection_attacks
 from .markdown_exfil import all_attacks as _markdown_exfil_attacks
+from .multilingual_bypass import all_attacks as _multilingual_bypass_attacks
 
 
 def all_attacks() -> list[Attack]:
@@ -14,4 +15,5 @@ def all_attacks() -> list[Attack]:
         *_direct_attacks(),
         *_indirect_injection_attacks(),
         *_markdown_exfil_attacks(),
+        *_multilingual_bypass_attacks(),
     ]
