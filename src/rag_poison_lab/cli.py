@@ -144,11 +144,11 @@ def compare(
 ):
     """Run the attack corpus across multiple Claude models in one go and emit a comparative report."""
     from .attacks import all_attacks
-    from .matrix import DEFAULT_CLAUDE_FAMILY, run_matrix
+    from .matrix import DEFAULT_FAMILY, run_matrix
     from .report import render_matrix_report
 
     attacks = all_attacks()
-    specs = DEFAULT_CLAUDE_FAMILY
+    specs = DEFAULT_FAMILY
     mode = "hardened" if hardened else "naive"
     total_calls = len(attacks) * len(specs)
     console.print(
@@ -181,12 +181,18 @@ def compare(
             progress.advance(overall_task)
 
         def on_model_done(row):
-            landed = sum(1 for r in row.results if r.landed)
-            color = "green" if landed > 0 else "dim"
-            progress.update(
-                state["model_task"],
-                description=f"[{color}]{row.spec.label}: {landed} of {len(row.results)} landed[/]",
-            )
+            if row.error:
+                progress.update(
+                    state["model_task"],
+                    description=f"[red]{row.spec.label}: error ({row.error[:60]}…)[/]",
+                )
+            else:
+                landed = sum(1 for r in row.results if r.landed)
+                color = "green" if landed > 0 else "dim"
+                progress.update(
+                    state["model_task"],
+                    description=f"[{color}]{row.spec.label}: {landed} of {len(row.results)} landed[/]",
+                )
             # leave the model task line in place so the user sees the per-model result
             state["model_task"] = None
 
@@ -205,6 +211,11 @@ def compare(
     # Per-model summary block under the progress
     console.print()
     for row in rows:
+        if row.error:
+            console.print(f"[bold red]{row.spec.label}[/]: error")
+            console.print(f"  {row.error}")
+            console.print()
+            continue
         landed = sum(1 for r in row.results if r.landed)
         head = f"[bold]{row.spec.label}[/]: {landed} of {len(row.results)} landed"
         console.print(head)

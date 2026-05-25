@@ -31,10 +31,17 @@ class ModelSpec:
 
 @dataclass
 class MatrixRow:
-    """All results for one model in a matrix run."""
+    """All results for one model in a matrix run.
+
+    If the model run failed (auth, rate limit, network), `results` will be
+    empty and `error` will hold a short description of what went wrong. The
+    row is still included in the matrix so reports show the failure rather
+    than silently dropping the column.
+    """
 
     spec: ModelSpec
     results: list[AttackResult] = field(default_factory=list)
+    error: str | None = None
 
 
 def make_client(spec: ModelSpec) -> LLMClient:
@@ -54,6 +61,17 @@ DEFAULT_CLAUDE_FAMILY: list[ModelSpec] = [
 ]
 
 
+DEFAULT_FAMILY: list[ModelSpec] = [
+    *DEFAULT_CLAUDE_FAMILY,
+    ModelSpec(
+        "Llama 3.3 70B (Groq)",
+        provider="openai",
+        model="llama-3.3-70b-versatile",
+        base_url="https://api.groq.com/openai/v1",
+    ),
+]
+
+
 def run_matrix(
     specs: list[ModelSpec],
     attacks: list,
@@ -66,6 +84,10 @@ def run_matrix(
 ) -> list[MatrixRow]:
     """Run the attack corpus once per model and return all rows.
 
+    Per-model errors are caught and recorded on the corresponding MatrixRow
+    so that one missing API key or one rate-limited provider doesn't kill
+    an otherwise-complete run.
+
     Callbacks let callers drive a progress UI: `on_model_start` and
     `on_model_done` fire around each model, `on_attack_start` and
     `on_attack_done` fire around each individual attack.
@@ -74,16 +96,23 @@ def run_matrix(
     for spec in specs:
         if on_model_start:
             on_model_start(spec)
-        client = make_client(spec)
-        rag = VulnerableRAG(llm=client, hardened=hardened)
-        results = run_attacks(
-            rag,
-            attacks,
-            benign_corpus=benign_corpus,
-            on_attack_start=on_attack_start,
-            on_attack_done=on_attack_done,
-        )
-        row = MatrixRow(spec=spec, results=results)
+        try:
+            client = make_client(spec)
+            rag = VulnerableRAG(llm=client, hardened=hardened)
+            results = run_attacks(
+                rag,
+                attacks,
+                benign_corpus=benign_corpus,
+                on_attack_start=on_attack_start,
+                on_attack_done=on_attack_done,
+            )
+            row = MatrixRow(spec=spec, results=results)
+        except Exception as exc:
+            row = MatrixRow(
+                spec=spec,
+                results=[],
+                error=f"{type(exc).__name__}: {exc}",
+            )
         rows.append(row)
         if on_model_done:
             on_model_done(row)

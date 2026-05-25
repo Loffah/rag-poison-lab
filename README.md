@@ -121,9 +121,18 @@ rag-poison-lab compare -o comparison-naive.md
 rag-poison-lab compare --hardened -o comparison-hardened.md
 ```
 
-Runs the same corpus against the current default model family (Claude Opus 4.7, Sonnet 4.6, Haiku 4.5) in one invocation and emits a comparative report. The report's landing matrix has one column per model so you can see at a glance which attacks landed against which models. Useful for the practical question "which model do we trust with our confidential RAG corpus?"
+Runs the same corpus against the current default model family in one invocation and emits a comparative report. The default family bundles **three Claude models (Opus 4.7, Sonnet 4.6, Haiku 4.5)** plus **Groq's free open-weight `llama-3.3-70b-versatile`**, so a single command produces a frontier-vs-open-weight comparison.
 
-27 LLM calls per run on the default family. Still cheap on Claude.
+The report's landing matrix has one column per model so you can see at a glance which attacks landed against which models. Useful for the practical question "which model do we trust with our confidential RAG corpus?"
+
+Set up Groq (free, no card required) for the open-weight slot:
+
+1. Sign up at https://console.groq.com and create an API key
+2. Set `OPENAI_API_KEY=gsk_your_groq_key` and `OPENAI_BASE_URL=https://api.groq.com/openai/v1`
+
+If you only set `ANTHROPIC_API_KEY`, the Groq model will error gracefully and its column shows `⚠️` in the matrix. The Claude columns still complete and the report still renders.
+
+With all 4 models active and the current attack corpus (4 + 5 + 5 + 4 = 18 attacks per model), a `compare` run sends ~72 LLM requests total. Still well under $0.10 on Claude; Groq is free.
 
 ### Naive vs hardened
 

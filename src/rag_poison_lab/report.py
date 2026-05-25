@@ -74,15 +74,25 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     2. Landing matrix with anchor links to each attack's detail
     3. Landings section (only the attacks that succeeded), expanded by default
     4. Defeated attacks, collapsed inside <details> for cleanliness
+
+    Rows with `error` set (one model failed mid-run, e.g. missing API key
+    or rate limit) are surfaced in their own section and shown as warnings
+    in matrix cells, but do not drop the column or block the rest of the
+    report.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     model_count = len(rows)
-    attack_count = len(rows[0].results) if rows else 0
-    total_runs = model_count * attack_count
-    total_landings = sum(sum(1 for r in row.results if r.landed) for row in rows)
+    ok_rows = [row for row in rows if not row.error]
+    errored_rows = [row for row in rows if row.error]
+    attack_count = max((len(row.results) for row in ok_rows), default=0)
+    total_runs = len(ok_rows) * attack_count
+    total_landings = sum(sum(1 for r in row.results if r.landed) for row in ok_rows)
+
+    def _row_landed_at(row: MatrixRow, idx: int) -> bool:
+        return not row.error and idx < len(row.results) and row.results[idx].landed
 
     landed_indices = [
-        i for i in range(attack_count) if any(row.results[i].landed for row in rows)
+        i for i in range(attack_count) if any(_row_landed_at(row, i) for row in rows)
     ]
     defeated_indices = [
         i for i in range(attack_count) if i not in landed_indices
@@ -107,7 +117,13 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     else:
         lines.append(
             f"> **0 of {total_runs} attack-model combinations landed** "
-            f"({lab_mode} lab configuration). All attacks defeated across all models."
+            f"({lab_mode} lab configuration). All attacks defeated across all completed models."
+        )
+    if errored_rows:
+        lines.append("")
+        lines.append(
+            f"> ⚠️ **{len(errored_rows)} of {model_count} models errored** during this run "
+            "and produced no results. See the Errors section below."
         )
     lines.append("")
 
@@ -129,19 +145,30 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     separator = " | ".join([":-:"] * model_count)
     lines.append(f"|:--| {separator} |")
 
-    if rows:
+    if ok_rows:
         for i in range(attack_count):
-            attack = rows[0].results[i].attack
+            attack = ok_rows[0].results[i].attack
             anchor = f"a{i + 1:02d}"
             attack_label = f"[`{attack.family}` / `{attack.payload_id}`](#{anchor})"
             cells: list[str] = []
             for row in rows:
-                cells.append("✅" if row.results[i].landed else "❌")
+                if row.error:
+                    cells.append("⚠️")
+                elif i < len(row.results) and row.results[i].landed:
+                    cells.append("✅")
+                else:
+                    cells.append("❌")
             cells_str = " | ".join(cells)
             lines.append(f"| {attack_label} | {cells_str} |")
 
-    totals = [sum(1 for r in row.results if r.landed) for row in rows]
-    totals_str = " | ".join(f"**{t} / {attack_count}**" for t in totals)
+    totals = []
+    for row in rows:
+        if row.error:
+            totals.append("**errored**")
+        else:
+            landed = sum(1 for r in row.results if r.landed)
+            totals.append(f"**{landed} / {attack_count}**")
+    totals_str = " | ".join(totals)
     lines.append(f"| **Total** | {totals_str} |")
     lines.append("")
 
@@ -149,6 +176,12 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     lines.append("## By model")
     lines.append("")
     for row in rows:
+        if row.error:
+            lines.append(
+                f"- **{row.spec.label}** (`{row.spec.model}`): "
+                f"⚠️ errored, no results recorded"
+            )
+            continue
         landed_names = [
             f"`{r.attack.family}/{r.attack.payload_id}`" for r in row.results if r.landed
         ]
@@ -166,6 +199,17 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
             )
     lines.append("")
 
+    # Errors section (if any models failed)
+    if errored_rows:
+        lines.append("## Errors")
+        lines.append("")
+        for row in errored_rows:
+            lines.append(
+                f"- **{row.spec.label}** (`{row.spec.provider}` / `{row.spec.model}`): "
+                f"`{row.error}`"
+            )
+        lines.append("")
+
     # Landings (the actual interesting findings)
     if landed_indices:
         lines.append("## Landings")
@@ -177,9 +221,9 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
         lines.append("")
 
         for i in landed_indices:
-            attack = rows[0].results[i].attack
+            attack = ok_rows[0].results[i].attack
             anchor = f"a{i + 1:02d}"
-            landed_on = [row.spec.label for row in rows if row.results[i].landed]
+            landed_on = [row.spec.label for row in ok_rows if _row_landed_at(row, i)]
 
             lines.append(f'<a id="{anchor}"></a>')
             lines.append("")
@@ -199,7 +243,9 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
             lines.append(f"**Probe question:** {attack.probe_question()}")
             lines.append("")
 
-            for row in rows:
+            for row in ok_rows:
+                if i >= len(row.results):
+                    continue
                 r = row.results[i]
                 mark = "✅ LANDED" if r.landed else "❌ defeated"
                 lines.append(f"#### {row.spec.label}: {mark}")
@@ -221,7 +267,7 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
         lines.append("")
 
         for i in defeated_indices:
-            attack = rows[0].results[i].attack
+            attack = ok_rows[0].results[i].attack
             anchor = f"a{i + 1:02d}"
 
             lines.append(f'<a id="{anchor}"></a>')
@@ -239,7 +285,9 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
             lines.append(f"**Probe question:** {attack.probe_question()}")
             lines.append("")
 
-            for row in rows:
+            for row in ok_rows:
+                if i >= len(row.results):
+                    continue
                 r = row.results[i]
                 lines.append(f"#### {row.spec.label}: defeated")
                 lines.append("")
