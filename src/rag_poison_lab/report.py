@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 from .matrix import MatrixRow
 from .scoring import AttackResult
+
+
+def _slug(text: str) -> str:
+    """Approximate the heading-anchor slug algorithm used by GitHub and
+    Obsidian for in-document `#anchor` links. Lower-case, alphanumerics
+    and underscores preserved, everything else becomes a hyphen,
+    collapses repeated hyphens."""
+    slug = text.lower()
+    slug = re.sub(r"[^a-z0-9_]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    return slug.strip("-")
 
 
 def render_report(results: list[AttackResult], lab_mode: str) -> str:
@@ -163,8 +175,9 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
     if ok_rows:
         for i in range(attack_count):
             attack = ok_rows[0].results[i].attack
-            anchor = f"a{i + 1:02d}"
-            attack_label = f"[`{attack.family}` / `{attack.payload_id}`](#{anchor})"
+            anchor_text = f"a{i + 1:02d} {attack.family} {attack.payload_id}"
+            anchor_slug = _slug(anchor_text)
+            attack_label = f"[`{attack.family}` / `{attack.payload_id}`](#{anchor_slug})"
             cells: list[str] = []
             for row in rows:
                 if row.error:
@@ -237,15 +250,13 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
 
         for i in landed_indices:
             attack = ok_rows[0].results[i].attack
-            anchor = f"a{i + 1:02d}"
+            anchor_text = f"a{i + 1:02d} {attack.family} {attack.payload_id}"
             landed_on = [row.spec.label for row in ok_rows if _row_landed_at(row, i)]
 
-            lines.append(f'<a id="{anchor}"></a>')
+            lines.append(f"### {anchor_text}")
             lines.append("")
-            lines.append(f"### ✅ `{attack.family}` / `{attack.payload_id}`")
-            lines.append("")
-            lines.append(f"> **Landed on:** {', '.join(landed_on)}  ")
-            lines.append(f"> **Severity if landed:** `{attack.severity}`")
+            lines.append(f"> **✅ LANDED** on: {', '.join(landed_on)}  ")
+            lines.append(f"> Family: `{attack.family}` · Payload: `{attack.payload_id}` · Severity: `{attack.severity}`")
             lines.append("")
             lines.append(f"**Description:** {attack.description}")
             lines.append("")
@@ -283,11 +294,12 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
 
         for i in defeated_indices:
             attack = ok_rows[0].results[i].attack
-            anchor = f"a{i + 1:02d}"
+            anchor_text = f"a{i + 1:02d} {attack.family} {attack.payload_id}"
 
-            lines.append(f'<a id="{anchor}"></a>')
+            lines.append(f"### {anchor_text}")
             lines.append("")
-            lines.append(f"### `{attack.family}` / `{attack.payload_id}`")
+            lines.append(f"> ❌ **Defeated** by all models")
+            lines.append(f"> Family: `{attack.family}` · Payload: `{attack.payload_id}` · Severity if landed: `{attack.severity}`")
             lines.append("")
             lines.append(f"**Description:** {attack.description}")
             lines.append("")
