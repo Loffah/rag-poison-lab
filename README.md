@@ -211,7 +211,7 @@ The OpenAI client transparently supports any provider that speaks the OpenAI Cha
 | Fireworks | `https://api.fireworks.ai/inference/v1` | |
 | vLLM / LM Studio / llama.cpp / LocalAI | `http://localhost:<port>/v1` | Self-hosted, free, runs open-weight models locally |
 
-For zero-cost local runs (good for reviewer evaluation), the easiest paths are:
+For zero-cost local runs (useful for CI, iterating on new attacks, or trying the tool without paying for tokens), the easiest paths are:
 
 - **Ollama** (default fallback, just install and `ollama pull llama3.1`)
 - **llama.cpp server** with `--api-key any --port 8080`, then `OPENAI_BASE_URL=http://localhost:8080/v1`

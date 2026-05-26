@@ -21,7 +21,7 @@ Force a specific backend regardless of env keys with:
     RAG_POISON_LAB_BACKEND=anthropic|openai|ollama
 
 Without any API key, the adapter falls back to a local Ollama instance at
-http://localhost:11434 so reviewers can evaluate the tool with zero spend.
+http://localhost:11434 so the tool can be run with zero spend.
 """
 
 from __future__ import annotations

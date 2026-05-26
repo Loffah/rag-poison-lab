@@ -4,7 +4,7 @@ Multi-model comparative report
 
 *Generated 2026-05-26 10:34:07 UTC*
 
-> **Snapshot.** This is one real `compare` run committed to the repo so reviewers can see the output format without installing and running the tool. Attack landings are probabilistic, so a different run on the same day would produce a slightly different matrix. See the stochasticity note in the [project README](../README.md). The point of this file is to show *what the deliverable looks like*, not to argue about exact landing counts for any one model.
+> **Snapshot.** This is one real `compare` run committed to the repo so the output format is visible without having to install and run the tool. Attack landings are probabilistic, so a different run on the same day would produce a slightly different matrix. See the stochasticity note in the [project README](../README.md). The point of this file is to show *what the deliverable looks like*, not to argue about exact landing counts for any one model.
 
 > **16 of 56 attack-model combinations landed** (naive lab configuration).
 

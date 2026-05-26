@@ -23,10 +23,10 @@ def make_canary() -> str:
 #
 # This list is intentionally broad: adding a marker that occasionally
 # over-triggers on a legitimate landing is far less damaging than missing
-# a refusal and producing a false-positive landing in a report a reviewer
-# will read. New refusal patterns observed in real model output should be
-# added here, with a regression test in tests/test_refusal_detection.py
-# pinning the exact response string.
+# a refusal and producing a false-positive landing in a delivered report.
+# New refusal patterns observed in real model output should be added
+# here, with a regression test in tests/test_refusal_detection.py pinning
+# the exact response string.
 _REFUSAL_MARKERS: tuple[str, ...] = (
     # Direct labels of the attack
     "prompt injection",
