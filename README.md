@@ -10,6 +10,8 @@ Status: under active development.
 
 https://github.com/user-attachments/assets/dd6ed931-f692-4f1c-876c-66011e971e87
 
+A static example of the markdown deliverable the `compare` command produces lives at [`examples/sample-report.md`](examples/sample-report.md): one real 4-model run from 2026-05-26 with the full landings and defeated-attack breakdown, committed so you can browse the output format without installing or running the tool.
+
 ## What this does
 
 RAG systems pull documents into LLM context to answer user questions. The LLM treats those documents as trusted context. If an attacker can plant content in the corpus (via a supplier portal, parsed email, scraped web source, etc.), they can inject instructions the model will follow.
