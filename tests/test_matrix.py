@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rag_poison_lab.attacks.direct import all_attacks as direct_attacks
-from rag_poison_lab.matrix import MatrixRow, ModelSpec, run_matrix
+from rag_poison_lab.matrix import ModelSpec, run_matrix
 
 
 @dataclass

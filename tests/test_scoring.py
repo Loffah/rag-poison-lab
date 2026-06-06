@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from rag_poison_lab.attacks.base import Attack, make_canary
+from rag_poison_lab.attacks.base import make_canary
 from rag_poison_lab.attacks.direct import all_attacks
 from rag_poison_lab.scoring import detect_canary, score
 
