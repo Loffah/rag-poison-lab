@@ -22,9 +22,11 @@ def run_attacks(
     For each attack:
       1. Clear the lab's document store.
       2. Ingest the benign cover corpus (so retrieval has plausible alternatives).
-      3. Ingest the poisoned document.
-      4. Send the probe question.
-      5. Score the response.
+      3. Ingest the poisoned document(s). Most attacks plant one, multi_hop
+         plants several.
+      4. Expose the tool surface the attack needs, if any (tool_call_hijack).
+      5. Send the probe question.
+      6. Score the response.
 
     Optional callbacks fire before and after each attack so callers can drive
     progress UIs.
@@ -37,11 +39,17 @@ def run_attacks(
         if benign_corpus:
             for doc_id, content in benign_corpus:
                 rag.ingest(content, doc_id=doc_id, source="corpus")
-        rag.ingest(
-            attack.build_document(),
-            doc_id=f"poisoned-{attack.payload_id}",
-            source="attacker",
-        )
+        poisoned = attack.build_documents()
+        for j, content in enumerate(poisoned):
+            # Single-doc attacks keep their familiar `poisoned-<id>` doc id;
+            # multi-doc attacks get a `-0`, `-1`, ... suffix per hop.
+            suffix = "" if len(poisoned) == 1 else f"-{j}"
+            rag.ingest(
+                content,
+                doc_id=f"poisoned-{attack.payload_id}{suffix}",
+                source="attacker",
+            )
+        rag.tools = attack.tools()
         response, retrieved = rag.ask(attack.probe_question())
         result = score(attack, response, [d.doc_id for d in retrieved])
         results.append(result)

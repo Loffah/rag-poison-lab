@@ -9,6 +9,19 @@ from .matrix import MatrixRow
 from .scoring import AttackResult
 
 
+def _poisoned_doc_lines(attack) -> list[str]:
+    """Markdown for an attack's poisoned document(s). Single-doc attacks render
+    one fenced block; multi-doc attacks (multi_hop) render each hop separately
+    so the reader can see the coordination that no single document reveals."""
+    docs = attack.build_documents()
+    if len(docs) == 1:
+        return ["**Poisoned document:**", "", "```", docs[0], "```", ""]
+    out: list[str] = [f"**Poisoned documents ({len(docs)} coordinated):**", ""]
+    for i, doc in enumerate(docs, start=1):
+        out += [f"*Document {i} of {len(docs)}:*", "", "```", doc, "```", ""]
+    return out
+
+
 def _slug(text: str) -> str:
     """Approximate the heading-anchor slug algorithm used by GitHub and
     Obsidian for in-document `#anchor` links. Lower-case, alphanumerics
@@ -45,6 +58,45 @@ _PRODUCTION_IMPACT: dict[str, str] = {
         "less-represented language slipped through. For a non-English-primary "
         "deployment (Norwegian-language documents, Japanese support contracts), "
         "the model's English-trained injection classifier offers reduced coverage."
+    ),
+    "hidden_text": (
+        "The instruction was invisible to a human reviewing the source document "
+        "(zero-width characters, an HTML comment, white-on-white text, or an "
+        "encoded blob) yet fully present in the token stream the model ingested. "
+        "In production this defeats manual review and 'looks fine to me' content "
+        "moderation: a poisoned PDF or wiki page passes human inspection while "
+        "still carrying a live instruction. Defense must live at the document "
+        "parser / ingest boundary, normalizing or stripping invisible content "
+        "before it reaches the model."
+    ),
+    "format_spoofing": (
+        "The document impersonated the structural format of a trusted message: "
+        "a system block, a prior assistant turn, a tool response, a compliance "
+        "header, or a security advisory, to borrow authority it does not have. "
+        "Any ingestion path that does not track provenance (which bytes came from "
+        "a trusted system vs. an untrusted uploaded document) is vulnerable: the "
+        "model cannot distinguish a real system instruction from one pasted into "
+        "a PDF. Defense lives in the document trust model (provenance metadata "
+        "and source attestation at ingest), not in the model."
+    ),
+    "multi_hop": (
+        "The injection was assembled from multiple poisoned documents, each "
+        "harmless in isolation, that only became an instruction once retrieval "
+        "pulled them together. Per-document content scanning, the common ingest "
+        "filter, sees nothing actionable in any single file. In production this "
+        "defeats moderation that inspects uploads one at a time and raises the "
+        "bar for detection: the defense needs cross-document provenance and "
+        "retrieval-time correlation, not per-file checks."
+    ),
+    "tool_call_hijack": (
+        "The model did not just say something; it invoked a sensitive tool "
+        "(sending mail, fetching an attacker URL, deleting records, or granting "
+        "access) with attacker-controlled arguments, triggered entirely by text "
+        "in a retrieved document. For an agentic deployment this is the highest-"
+        "severity outcome: data exfiltration, destructive actions, or privilege "
+        "escalation executed under the agent's own credentials. Defense must live "
+        "in the authorization layer (sensitive tools gated behind explicit user "
+        "intent and human-in-the-loop confirmation), not in model alignment alone."
     ),
 }
 
@@ -86,12 +138,7 @@ def render_report(results: list[AttackResult], lab_mode: str) -> str:
                 f"- **Retrieved docs**: {r.retrieved_doc_ids}",
                 f"- **Notes**: {r.notes}",
                 "",
-                "**Poisoned document**:",
-                "",
-                "```",
-                r.attack.build_document(),
-                "```",
-                "",
+                *_poisoned_doc_lines(r.attack),
                 f"**Probe question**: {r.attack.probe_question()}",
                 "",
                 "**LLM response**:",
@@ -322,12 +369,7 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
             if impact:
                 lines.append(f"**Production impact:** {impact}")
                 lines.append("")
-            lines.append("**Poisoned document:**")
-            lines.append("")
-            lines.append("```")
-            lines.append(attack.build_document())
-            lines.append("```")
-            lines.append("")
+            lines.extend(_poisoned_doc_lines(attack))
             lines.append(f"**Probe question:** {attack.probe_question()}")
             lines.append("")
 
@@ -360,17 +402,12 @@ def render_matrix_report(rows: list[MatrixRow], lab_mode: str) -> str:
 
             lines.append(f"### {anchor_text}")
             lines.append("")
-            lines.append(f"> ❌ **Defeated** by all models")
+            lines.append("> ❌ **Defeated** by all models")
             lines.append(f"> Family: `{attack.family}` · Payload: `{attack.payload_id}` · Severity if landed: `{attack.severity}`")
             lines.append("")
             lines.append(f"**Description:** {attack.description}")
             lines.append("")
-            lines.append("**Poisoned document:**")
-            lines.append("")
-            lines.append("```")
-            lines.append(attack.build_document())
-            lines.append("```")
-            lines.append("")
+            lines.extend(_poisoned_doc_lines(attack))
             lines.append(f"**Probe question:** {attack.probe_question()}")
             lines.append("")
 
