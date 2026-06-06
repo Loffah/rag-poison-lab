@@ -3,7 +3,7 @@ Ollama backends.
 
 Backend selection is driven by env vars. Set one of:
 
-    ANTHROPIC_API_KEY            -> use Anthropic (default model: claude-opus-4-7)
+    ANTHROPIC_API_KEY            -> use Anthropic (default model: claude-opus-4-8)
     OPENAI_API_KEY               -> use OpenAI (default model: gpt-4o)
 
 Override the default model per provider with:
@@ -72,7 +72,7 @@ def _detect_openai_model() -> str:
 
 @dataclass
 class AnthropicClient:
-    model: str = field(default_factory=lambda: _env_default("ANTHROPIC_MODEL", "claude-opus-4-7"))
+    model: str = field(default_factory=lambda: _env_default("ANTHROPIC_MODEL", "claude-opus-4-8"))
     max_tokens: int = 1024
 
     def generate(self, system: str, user: str) -> str:

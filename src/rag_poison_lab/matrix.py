@@ -55,6 +55,7 @@ def make_client(spec: ModelSpec) -> LLMClient:
 
 
 DEFAULT_CLAUDE_FAMILY: list[ModelSpec] = [
+    ModelSpec("Claude Opus 4.8", "anthropic", "claude-opus-4-8"),
     ModelSpec("Claude Opus 4.7", "anthropic", "claude-opus-4-7"),
     ModelSpec("Claude Sonnet 4.6", "anthropic", "claude-sonnet-4-6"),
     ModelSpec("Claude Haiku 4.5", "anthropic", "claude-haiku-4-5-20251001"),
