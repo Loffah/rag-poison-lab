@@ -20,3 +20,6 @@ report-*.md
 comparison-*.md
 reports/
 runs/
+
+# MkDocs build output (deployed to Pages from CI, never committed)
+site/

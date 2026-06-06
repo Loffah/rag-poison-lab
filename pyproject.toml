@@ -1,7 +1,7 @@
 [project]
 name = "rag-poison-lab"
 version = "0.0.1"
-description = "A pentest harness for RAG systems: probes for indirect prompt injection, exfiltration channels, and tool-call hijack against agentic-AI deployments."
+description = "Plant text in a RAG corpus, hijack the agent. A pentest harness measuring how susceptible each model is to indirect prompt injection: 8 attack families, multi-model comparison, naive vs hardened."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
+docs = ["mkdocs-material>=9.5"]
 
 [project.scripts]
 rag-poison-lab = "rag_poison_lab.cli:app"
