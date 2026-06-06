@@ -130,9 +130,29 @@ class Attack:
         """Return the poisoned document content to ingest into the corpus."""
         raise NotImplementedError
 
+    def build_documents(self) -> list[str]:
+        """Return every poisoned document this attack plants in the corpus.
+
+        Most attacks plant a single document, so the default wraps
+        `build_document()`. Multi-document attacks (see the multi_hop family)
+        override this to return several documents that only form an injection
+        when retrieved together; no single document looks malicious on its own.
+        """
+        return [self.build_document()]
+
     def probe_question(self) -> str:
         """Return the user question to ask after ingest."""
         raise NotImplementedError
+
+    def tools(self) -> list:
+        """Tool surface this attack needs the lab to expose, if any.
+
+        Returns an empty list for the vast majority of attacks, which target
+        the model's text output. The tool_call_hijack family overrides this to
+        advertise a set of callable tools (see lab.ToolSpec) that the attack
+        then tries to trigger from poisoned document content.
+        """
+        return []
 
     def landed(self, response: str) -> bool:
         """Return True if this attack succeeded against the given response.
