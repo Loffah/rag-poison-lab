@@ -290,14 +290,15 @@ def compare(
     family: str = typer.Option(None, "--family", help="Comma-separated list of attack families to run. Default: all."),
     only: str = typer.Option(None, "--only", help="Run a single attack by 'family/payload_id'."),
     exclude: str = typer.Option(None, "--exclude", help="Comma-separated list of families to skip."),
+    claude_only: bool = typer.Option(False, "--claude-only", help="Skip the open-weight comparator (Llama via Groq). Useful when only Anthropic credentials are configured."),
 ):
     """Run the attack corpus across multiple Claude models in one go and emit a comparative report."""
     from .attacks import all_attacks
-    from .matrix import DEFAULT_FAMILY, run_matrix
+    from .matrix import DEFAULT_CLAUDE_FAMILY, DEFAULT_FAMILY, run_matrix
     from .report import render_matrix_report
 
     attacks = _filter_attacks(all_attacks(), family=family, only=only, exclude=exclude)
-    specs = DEFAULT_FAMILY
+    specs = DEFAULT_CLAUDE_FAMILY if claude_only else DEFAULT_FAMILY
     mode = "hardened" if hardened else "naive"
     total_calls = len(attacks) * len(specs)
     if output is None:
