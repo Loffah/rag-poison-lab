@@ -35,6 +35,36 @@ This tool tests for that. It ships with:
 5. **Multi-model comparison** (`compare` command) that runs the corpus across multiple Claude models in a single invocation and emits a side-by-side matrix. Useful for picking which model to trust with a confidential RAG deployment.
 6. A **mitigations toggle** so you can compare naive vs hardened RAG configurations and see which attack families survive proper defenses.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    CORPUS["Attack corpus<br/>37 attacks across 8 families"]
+    LAB["Lab (target RAG)<br/>naive  or  --hardened"]
+
+    subgraph DISPATCH["Multi-model dispatch (parallel)"]
+        direction TB
+        OPUS48["Claude Opus 4.8"]
+        OPUS47["Claude Opus 4.7"]
+        SONNET["Claude Sonnet 4.6"]
+        HAIKU["Claude Haiku 4.5"]
+        LLAMA["Llama 3.3 70B (Groq)"]
+    end
+
+    subgraph SCORE["Scoring"]
+        direction TB
+        CANARY["Canary detection<br/>per attack family"]
+        REFUSE["Refusal-aware filter<br/>filters mention-in-refusal"]
+        CANARY --> REFUSE
+    end
+
+    REPORT["Side-by-side matrix report<br/>examples/sample-report.md"]
+
+    CORPUS --> LAB --> DISPATCH --> SCORE --> REPORT
+```
+
+The pipeline is corpus → lab → multi-model dispatch → two-stage scoring → matrix report. The lab itself is a self-contained vulnerable RAG that can be flipped between naive and hardened configurations with the `--hardened` flag. Scoring is two-stage so a model that mentions the canary while explicitly refusing the injection is correctly counted as defeated, not landed (see `tests/test_refusal_detection.py` for the pinned cases).
+
 > **Note on framing.** The frontier Claude models defeat most attacks in the current corpus most of the time. They actively recognize the patterns and refuse, often explaining the attempt to the user. They are not airtight: in the committed sample run (4-model, 14-attack pre-expansion corpus) Opus 4.7 landed 1/14, Haiku 4.5 landed 2/14, and Llama 3.3 70B (open-weight) landed 13/14. The corpus has since grown to 37 attacks across eight families, and Opus 4.8 has been added as a column; fresh numbers will replace the sample on the next published run. The point isn't any one matrix; it's the spread. The tool's primary value is **comparative measurement**: same corpus, multiple models, multiple lab configurations. The deltas (frontier vs open-weight, generation-over-generation within Opus, naive vs hardened) are what matter for picking which model to trust with a confidential RAG deployment.
 
 > **Note on stochasticity.** Attack landings are probabilistic. Model behavior varies between runs, so the same attack against the same model can land in one run and be defeated in the next. Against frontier-aligned models the per-attack landing rate is low but non-zero; against weaker or open-weight models it's high but still not deterministic. The matrix in any single report is one sample of that distribution. Conclusions about a model's susceptibility should be drawn from multiple runs, not a single matrix.
@@ -143,7 +173,7 @@ rag-poison-lab attack --only markdown_exfil/citation_image
 rag-poison-lab list-attacks
 ```
 
-The same flags work on `compare`. `--only markdown_exfil/citation_image` against the default 4-model family sends 4 LLM calls instead of 72.
+The same flags work on `compare`. `--only markdown_exfil/citation_image` against the default 5-model lineup sends 5 LLM calls instead of 185.
 
 Each run sends one LLM request per attack in the current corpus (37 with all eight shipped families: 4 + 5 + 5 + 5 + 5 + 5 + 4 + 4). On Claude that still costs only a few US cents per full run.
 
