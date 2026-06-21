@@ -39,34 +39,11 @@ This tool tests for that. It ships with:
 
 ```mermaid
 flowchart TB
-    subgraph CORPUS["Attack corpus · 37 attacks across 8 families"]
-        direction LR
-        subgraph C1[" "]
-            direction TB
-            DO[direct_override · 4]
-            II[indirect_injection · 5]
-            ME[markdown_exfil · 5]
-            MB[multilingual_bypass · 5]
-        end
-        subgraph C2[" "]
-            direction TB
-            HT[hidden_text · 5]
-            FS[format_spoofing · 5]
-            MH[multi_hop · 4]
-            TCH[tool_call_hijack · 4]
-        end
-    end
+    CORPUS["Attack corpus · 37 attacks · 8 families<br/>direct_override · indirect_injection · markdown_exfil · multilingual_bypass<br/>hidden_text · format_spoofing · multi_hop · tool_call_hijack"]
 
     LAB["Lab · self-contained vulnerable RAG<br/>naive  |  --hardened"]
 
-    subgraph DISPATCH["Multi-model dispatch · parallel per attack"]
-        direction LR
-        OPUS48[Claude Opus 4.8]
-        OPUS47[Claude Opus 4.7]
-        SONNET[Claude Sonnet 4.6]
-        HAIKU[Claude Haiku 4.5]
-        LLAMA["Llama 3.3 70B (Groq)"]
-    end
+    DISPATCH["Multi-model dispatch · parallel per attack<br/>Anthropic · OpenAI-compatible (Groq, OpenAI, etc.) · Ollama"]
 
     subgraph SCORE["Scoring · two-stage"]
         direction LR
