@@ -38,32 +38,42 @@ This tool tests for that. It ships with:
 ## Architecture
 
 ```mermaid
-flowchart LR
-    CORPUS["Attack corpus<br/>37 attacks across 8 families"]
-    LAB["Lab (target RAG)<br/>naive  or  --hardened"]
-
-    subgraph DISPATCH["Multi-model dispatch (parallel)"]
-        direction TB
-        OPUS48["Claude Opus 4.8"]
-        OPUS47["Claude Opus 4.7"]
-        SONNET["Claude Sonnet 4.6"]
-        HAIKU["Claude Haiku 4.5"]
-        LLAMA["Llama 3.3 70B (Groq)"]
+flowchart TB
+    subgraph CORPUS["Attack corpus · 37 attacks across 8 families"]
+        DO["<b>direct_override</b> (4)<br/>ignore_prior · system_tag<br/>developer_note · continuation_trick"]
+        II["<b>indirect_injection</b> (5)<br/>policy_amendment · embedded_qa<br/>conversational_aside · metadata_directive<br/>first_person_assistant"]
+        ME["<b>markdown_exfil</b> (5)<br/>acknowledgment_image · verification_badge<br/>citation_image · format_template · context_relay"]
+        MB["<b>multilingual_bypass</b> (5)<br/>norwegian_full · norwegian_embedded<br/>tagalog_override · swahili_override · japanese_override"]
+        HT["<b>hidden_text</b> (5)<br/>zero_width_interleave · html_comment<br/>white_on_white · font_size_zero · base64_payload"]
+        FS["<b>format_spoofing</b> (5)<br/>fake_system_block · fake_assistant_turn<br/>fake_tool_output · compliance_stamp · cve_advisory"]
+        MH["<b>multi_hop</b> (4)<br/>split_directive · pointer_chain<br/>assembled_payload · cross_corroboration"]
+        TCH["<b>tool_call_hijack</b> (4)<br/>email_exfil · beacon_fetch<br/>destructive_delete · privilege_escalation"]
     end
 
-    subgraph SCORE["Scoring"]
-        direction TB
-        CANARY["Canary detection<br/>per attack family"]
-        REFUSE["Refusal-aware filter<br/>filters mention-in-refusal"]
+    LAB["<b>Lab (target RAG)</b><br/>self-contained vulnerable RAG<br/>naive  |  --hardened toggle"]
+
+    subgraph DISPATCH["Multi-model dispatch · parallel per attack"]
+        direction LR
+        OPUS48[Claude Opus 4.8]
+        OPUS47[Claude Opus 4.7]
+        SONNET[Claude Sonnet 4.6]
+        HAIKU[Claude Haiku 4.5]
+        LLAMA["Llama 3.3 70B<br/>via Groq"]
+    end
+
+    subgraph SCORE["Scoring · two-stage"]
+        direction LR
+        CANARY["Canary detection<br/>per-family logic"]
+        REFUSE["Refusal-aware filter<br/>regression-pinned markers"]
         CANARY --> REFUSE
     end
 
-    REPORT["Side-by-side matrix report<br/>examples/sample-report.md"]
+    REPORT["<b>Side-by-side matrix report</b><br/>landing matrix · per-attack detail<br/>see examples/sample-report.md"]
 
     CORPUS --> LAB --> DISPATCH --> SCORE --> REPORT
 ```
 
-The pipeline is corpus → lab → multi-model dispatch → two-stage scoring → matrix report. The lab itself is a self-contained vulnerable RAG that can be flipped between naive and hardened configurations with the `--hardened` flag. Scoring is two-stage so a model that mentions the canary while explicitly refusing the injection is correctly counted as defeated, not landed (see `tests/test_refusal_detection.py` for the pinned cases).
+The pipeline is corpus → lab → multi-model dispatch → two-stage scoring → matrix report. The lab is a self-contained vulnerable RAG that flips between naive and hardened configurations with the `--hardened` flag. Scoring is two-stage so a model that mentions the canary while explicitly refusing the injection is correctly counted as defeated, not landed (see `tests/test_refusal_detection.py` for the pinned cases).
 
 > **Note on framing.** The frontier Claude models defeat most attacks in the current corpus most of the time. They actively recognize the patterns and refuse, often explaining the attempt to the user. They are not airtight: in the committed sample run (4-model, 14-attack pre-expansion corpus) Opus 4.7 landed 1/14, Haiku 4.5 landed 2/14, and Llama 3.3 70B (open-weight) landed 13/14. The corpus has since grown to 37 attacks across eight families, and Opus 4.8 has been added as a column; fresh numbers will replace the sample on the next published run. The point isn't any one matrix; it's the spread. The tool's primary value is **comparative measurement**: same corpus, multiple models, multiple lab configurations. The deltas (frontier vs open-weight, generation-over-generation within Opus, naive vs hardened) are what matter for picking which model to trust with a confidential RAG deployment.
 
