@@ -7,10 +7,7 @@ Status: under active development.
 **Documentation: [loffah.github.io/rag-poison-lab](https://loffah.github.io/rag-poison-lab/)** covers the overview, quickstart, the full attack-family inventory, the defense model, architecture, CLI reference, and a guide to writing your own attack. Built from `docs/` with MkDocs Material; build locally with `pip install "mkdocs-material>=9.5"` then `mkdocs serve`.
 
 ## Demo
-
-
-
-https://github.com/user-attachments/assets/dd6ed931-f692-4f1c-876c-66011e971e87
+https://github.com/user-attachments/assets/c50ee5a6-24da-4c54-9fcc-f000d919bf85
 
 A static example of the markdown deliverable the `compare` command produces lives at [`examples/sample-report.md`](examples/sample-report.md): one real 5-model run from 2026-06-21 with the full landings and defeated-attack breakdown, committed so you can browse the output format without installing or running the tool.
 
